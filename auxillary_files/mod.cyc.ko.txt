@@ -1,0 +1,47 @@
+Sulfur	M00176 Assimilatory sulfate reduction, sulfate  -> H2S	K00380	K00381	K00390	K00392	K00860	K00955	K00956	K00957	K00958	K13811		
+Sulfur	M00596 Dissimilatory sulfate reduction, sulfate -> H2S	K00394	K00395	K00956	K00957	K00958	K11180	K11181			
+Sulfur	M00595 Thiosulfate oxidation by SOX complex, thiosulfate -> sulfate	K17222	K17223	K17224	K17225	K17226	K17227	K22622					
+Sulfur	MS1 Sulfite reduction, sulfite -> H2S	K16950	K16951	K00385									
+Sulfur	MS2 Thiosulfate reduction, thiosulfate -> H2S	K08352	K08353	K08354									
+Sulfur	MS3 Sulfide oxidation II, H2S=> sulfur	K17229	K17230										
+Sulfur	MS4 Sulfide oxidation I, H2S -> persulfide	K17218											
+Sulfur	MS5 Sulfide oxidation III, persulfide -> sulfite	K17725											
+Sulfur	MS6 Sulfur reductase, sulfur -> sulfide	K17219	K17220	K17221	K16952								
+Sulfur	MS7 sulfite oxidation, sulfite -> sulfate	K21307	K21308	K21309	K05301	K00387							
+Sulfur	MS8 sulfur oxidation, sulfur -> sulfite	K16952	K17725
+ATP	M00416 Cytochrome aa3-600 menaquinol oxidase	K02826	K02827	K02827,K02828
+ATP	M00156 Cytochrome c oxidase, cbb3-type	K00404	K00405	K00406
+ATP	M00155 Cytochrome c oxidase, prokaryotes	K02274	K02275	K02274,K15408								
+ATP	M00417 Cytochrome o ubiquinol oxidase	K02297	K02300										
+ATP	M00153 Cytochrome bd ubiquinol oxidase	K00425	K00426										
+ATP	M00154 Cytochrome c oxidase	K02257											
+Methane	M00174 Methane oxidation, methanotroph, methane -> formaldehyde	K10944	K10945	K10946	K14028	K14029	K16157	K16158	K16159	K16160	K16162	K17066	K00093
+Methane	M00346 Formaldehyde assimilation, serine pathway	K00600	K08692	K14067	K08691
+Methane	M00345 Formaldehyde assimilation, ribulose monophosphate pathway	K08093	K13812	K13831
+Methane	M00357 Methanogenesis, acetate -> methane	K00193	K00194	K00197	K00399	K00401	K00402	K03421	K22516	K00125
+Methane	M00567 Methanogenesis, CO2 -> methane	K00399	K00401	K00402	K00672	K01499	K03421	K22516	K00125	K10713
+Methane	M00356 Methanogenesis, methanol -> methane	K14080	K00399	K00401	K00402	K03421	K22516	K00125
+Methane	M00563 Methanogenesis, methylamine/dimethylamine/trimethylamine -> methane	K14082	K00399	K00401	K00402	K03421	K22516	K00125	K15228	K15229
+Methane	M00422 Acetyl-CoA pathway, CO2 -> acetyl-CoA	K00192	K00193	K00194	K00195	K00197
+Methane	MM1 formaldehyde reduction formaldehyde, formate=> CO2	K00148	K00121	K01070	K00153	K00122	K00123	K22515	K00124	K00126	K00127	K00125	K22516
+Nitrogen	M00529 Denitrification, nitrate -> nitrogen	K00368	K00370	K00371	K00374	K00376	K02305	K02567	K02568	K04561	K15864
+Nitrogen	M00530 Dissimilatory nitrate reduction, nitrate -> ammonia	K00362	K00363	K00370	K00371	K00374	K02567	K02568	K03385	K15876
+Nitrogen	M00531 Assimilatory nitrate reduction, nitrate -> ammonia	K00360	K00366	K00367	K00372	K10534	K17877
+Nitrogen	M00804 Complete nitrification, comammox, ammonia -> nitrite -> nitrate	K00370	K00371	K10535	K10944	K10945	K10946
+Nitrogen	M00528 Nitrification, ammonia -> nitrite	K10535	K10944	K10945	K10946
+Nitrogen	M00175 Nitrogen fixation, nitrogen -> ammonia	K00531	K02586	K02588	K02591								
+Nitrogen	MN1 Nitrogen related compounds -> ammonia	K01428	K01429	K01430	K01725	K14048	K01721	K20807					
+Nitrogen	MN2 Annamox , nitrite, ammonia -> nitrogen	K20932	K20933	K20934	K20935	K00368	K15864
+Carbon fixation	M00165 Reductive pentose phosphate cycle (Calvin cycle)	K00855	K01601	K01602									
+Carbon fixation	M00173 Reductive citrate cycle (Arnon-Buchanan cycle)	K00169	K00170	K00171	K00172	K00174	K00175	K00176	K00177	K03737	K15230	K15231
+Carbon fixation	M00374 Dicarboxylate-hydroxybutyrate cycle	K00169	K00170	K00171	K00172	K14465
+Carbon fixation	M00377 Reductive acetyl-CoA pathway (Wood-Ljungdahl pathway)	K00194	K00197	K00198	K05299	K14138	K15022	K00196
+Carbon fixation	M00620 Incomplete reductive citrate cycle, acetyl-CoA -> oxoglutarate	K00169	K00170	K00171	K00172	K00174	K00175	K00176	K00177
+Carbon fixation	M00376 3-Hydroxypropionate bi-cycle	K08691
+Carbon fixation	MC1 CO oxidation CO<=>CO2	K03518	K03519	K03520
+MISC	MMC Chloor metabolism	K17050	K17051	K17052	K21647	K09162	K01560						
+MISC	MMA Arsenicum metabolism	K08355	K03741	K08356									
+MISC	MMS Selenium metabolism	K17050	K17051	K17052	K12527	K12528	K12529						
+MISC	MDC Decaheme cytochrome	UNKNOWN2	UNKNOWN3
+hydrogen	MHFE hydrogenases Fe-Fe	hydroA1	hydroA2	hydroA3	hydroA4	hydroB	hydroC1	hydroC2	hydroC3	hydroFe
+hydrogen	MHNI hydrogenases NI-Fe	hydro1a	hydro1b	hydro1c	hydro1d	hydro1e	hydro1f	hydro1g	hydro1h	hydro1i	hydro1j	hydro1k	hydro2a	hydro2b	hydro2c	hydro2d	hydro2e	hydro3a	hydro3b	hydro3c	hydro3d	hydro4a	hydro4b	hydro4c	hydro4d	hydro4e	hydro4f	hydro4g	hydro4h	hydro4i

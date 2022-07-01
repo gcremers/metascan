@@ -1,0 +1,67 @@
+Carbon Cycle	Formaldehyde Assimilation -Serine	K08691
+Carbon Cycle	Formaldehyde Assimilation -Serine	K08692	K14067
+Carbon Cycle	Formaldehyde Assimilation -Serine	K00600
+Carbon Cycle	Formaldehyde Assimilation -Rump	K08093	K13812	K13831
+Carbon Cycle	Methanotrophy	K15228	K15229
+Carbon Cycle	Methanotrophy (core CH4)	K10944	K10945	K10946	K16157	K16158	K16159	K16160	K16162
+Carbon Cycle	Methanotrophy (core CH3OH)	K00093	K14029	K14028	K17066
+Carbon Cycle	Methanotrophy	K00148	K01070	K00121	K00153
+Carbon Cycle	Methanotrophy	K00122	K00126	K00123	K00127	K22515	K22516	K00124	K00125	K00125	K22516
+Carbon Cycle	Methanogenesis (core)	K00399	K03421	K00401	K00402
+Carbon Cycle	Methanogenesis	K14080
+Carbon Cycle	Methanogenesis	K14082
+Carbon Cycle	Methanogenesis	K13812	K10713
+Carbon Cycle	Methanogenesis	K00672
+Carbon Cycle	Methanogenesis	K01499
+Carbon Cycle	Methanogenesis	K00193	K00194	K00197
+Carbon Cycle	Wood-Ljungdahl pathway 	K00193	K14138	K00197	K00194
+Carbon Cycle	Wood-Ljungdahl pathway 	K03518	K03519	K03520	K00192	K00195
+Carbon Cycle	Wood-Ljungdahl pathway 	K00198	K00196
+Carbon Cycle	Wood-Ljungdahl pathway 	K05299	K15022
+Carbon Cycle	Citric Acid cycle	K08691
+Carbon Cycle	Citric Acid cycle	K14465
+Carbon Cycle	Citric Acid cycle	K00174	K00175	K00176	K00177
+Carbon Cycle	Citric Acid cycle	K00169	K00170	K00171	K00172	K03737
+Carbon Cycle	Citric Acid cycle	K15230	K15231
+Carbon Cycle	Oxidative phosphorylation	K02826	K02275	K02827	K02297	K00404	K02300	K00405	K00425	K00406	K00426	K02274	K02257	K02274,K15408	K02827,K02828
+Carbon Cycle	Calvin cycle	K01601	K01602	K00855
+Sulfur Cycle	Sulfide oxidation II	K17219	K17220	K17221	K16952	
+Sulfur Cycle	Sulfur reduction	K17229	K17230		
+Sulfur Cycle	Sulfide oxidation I	K17218
+Sulfur Cycle	Sulfur oxidation	K16952
+Sulfur Cycle	Sulfide oxidation III	K17725
+Sulfur Cycle	Sulfite oxidation	K21307	K21308	K21309	K05301	K00387		
+Sulfur Cycle	Sulfite reduction	K13811	K00958	K00957	K00955	K00956
+Sulfur Cycle	Sulfite reduction	K00958	K00956	K00957
+Sulfur Cycle	Sulfite reduction	K13811	K00860	K00955
+Sulfur Cycle	Sulfite reduction	K00394	K00395
+Sulfur Cycle	Sulfite reduction	K00390
+Sulfur Cycle	Sulfate reduction	K11180	K11181
+Sulfur Cycle	Sulfate reduction	K00380	K00381	K00392
+Sulfur Cycle	Sulfate reduction	K16950	K16951	K00385
+Sulfur Cycle	Thiosulfate reduction	K08352	K08353	K08354
+Sulfur Cycle	Thiosulfate oxidation	K17222	K17223	K17224	K17225	K17226	K17227	K22622
+Nitrogen Cycle	DNRA (nitrate reduction)	K00370	K00371	K00374	K02567	K02568
+Nitrogen Cycle	DNRA (nitrite reduction)	K00363	K00362	K03385	K15876	K04015
+Nitrogen Cycle	Nitrate reduction (assimilatory)	K00367	K10534	K00372	K00360
+Nitrogen Cycle	Nitrite reduction (assimilatory)	K00366	K17877
+Nitrogen Cycle	Denitrifaction (nitrate reduction)	K00370	K00371	K00374	K02567	K02568
+Nitrogen Cycle	Denitrifaction (nitrite reduction)	K15864	K00368
+Nitrogen Cycle	Denitrifaction (nitric oxide reduction)	K02305	K04561
+Nitrogen Cycle	Denitrifaction (nitrous oxide reduction)	K00376
+Nitrogen Cycle	Ammonium oxidation	K10944	K10946	K10945
+Nitrogen Cycle	Ammonium oxidation	K10535
+Nitrogen Cycle	Nitrite oxidation	K00371	K00370	K00374	K02568	K02567
+Nitrogen Cycle	Nitrite oxidation	K00367	K00372	K00360	K10534
+Nitrogen Cycle	Anammox (core)	K20932	K20934	K20933	K20935
+Nitrogen Cycle	Annamox	K00372	K00360
+Nitrogen Cycle	Nitrogen fixation	K02588	K02586	K02591	K00531	
+Nitrogen Cycle	N-compounds	K01721	K20807
+Nitrogen Cycle	N-compounds	K01725
+Nitrogen Cycle	N-compounds	K01428	K01429	K01430	K14048
+Nitrogen Cycle	Misc. Chloor	K17050	K17051	K17052	K21647	K09162	K01560		
+Nitrogen Cycle	Misc. Arsenite	K08355	K03741	K08356	
+Nitrogen Cycle	Misc. Selenium	K17050	K17051	K17052	K12527	K12528	K12529		
+Nitrogen Cycle	Misc. Decaheme	UNKNOWN2	UNKNOWN3		
+Carbon Cycle	H2 formation	hydroA1	hydroA2	hydroA3	hydroA4	hydroB	hydroC1	hydroC2	hydroC3	hydroFe
+Carbon Cycle	Dehydrogenases	hydro1a	hydro1b	hydro1c	hydro1d	hydro1e	hydro1f	hydro1g	hydro1h	hydro1i	hydro1j	hydro1k	hydro2a	hydro2b	hydro2c	hydro2d	hydro2e	hydro3a	hydro3b	hydro3c	hydro3d	hydro4a	hydro4b	hydro4c	hydro4d	hydro4e	hydro4f	hydro4g	hydro4h	hydro4i

@@ -1,0 +1,50 @@
+hydro1	[FeFe] hydrogenase, group B1/B3
+hydro2	[FeFe] hydrogenase, group A
+hydro3	Ni-Fe Hydrogenase Vignais Group 1
+hydro4	Ni-Fe Hydrogenase Vignais Group IIa
+hydro5	Ni-Fe Hydrogenase Vignais Group IIb
+hydro6	Ni-Fe Hydrogenase Vignais Group IIIa
+hydro7	Ni-Fe Hydrogenase Vignais Group IIIb
+hydro8	Ni-Fe Hydrogenase Vignais Group IIIc
+hydro9	Ni-Fe Hydrogenase Vignais Group IIId
+hydro10	Ni-Fe Hydrogenase Vignais Group IV
+UNKNOWN2	mtrC; Decaheme c-type cytochrome, OmcA/MtrC family
+UNKNOWN3	mtrB; Decaheme-associated outer membrane protein, MtrB/PioB family
+hydro1a	Ni-Fe hydrogenase Group 1a
+hydro1b	Ni-Fe hydrogenase Group Ib
+hydro1c	Ni-Fe hydrogenase Group Ic
+hydro1d	Ni-Fe hydrogenase Group Id
+hydro1e	Ni-Fe hydrogenase Group Ie
+hydro1f	Ni-Fe hydrogenase Group If
+hydro1g	Ni-Fe hydrogenase Group Ig
+hydro1h	Ni-Fe hydrogenase Group Ih
+hydro1i	Ni-Fe hydrogenase Group Ii
+hydro1j	Ni-Fe hydrogenase Group Ij
+hydro1k	Ni-Fe hydrogenase Group Ik
+hydro2a	Ni-Fe hydrogenase Group IIa
+hydro2b	Ni-Fe hydrogenase Group IIb
+hydro2c	Ni-Fe hydrogenase Group IIc
+hydro2d	Ni-Fe hydrogenase Group IId
+hydro2e	Ni-Fe hydrogenase Group IIe
+hydro3a	Ni-Fe hydrogenase Group IIIa
+hydro3b	Ni-Fe hydrogenase Group IIIb
+hydro3c	Ni-Fe hydrogenase Group IIIc
+hydro3d	Ni-Fe hydrogenase Group IIId
+hydro4a	Ni-Fe hydrogenase Group IVa
+hydro4b	Ni-Fe hydrogenase Group IVb
+hydro4c	Ni-Fe hydrogenase Group IVc
+hydro4d	Ni-Fe hydrogenase Group IVd
+hydro4e	Ni-Fe hydrogenase Group IVe
+hydro4f	Ni-Fe hydrogenase Group IVf
+hydro4g	Ni-Fe hydrogenase Group IVg
+hydro4h	Ni-Fe hydrogenase Group IVh
+hydro4i	Ni-Fe hydrogenase Group IVi
+hydroA1	Fe-Fe hydrogenase Group A1
+hydroA2	Fe-Fe hydrogenase Group A2
+hydroA3	Fe-Fe hydrogenase Group A3
+hydroA4	Fe-Fe hydrogenase Group A4
+hydroB	Fe-Fe hydrogenase Group B
+hydroC1	Fe-Fe hydrogenase Group C1
+hydroC2	Fe-Fe hydrogenase Group C2
+hydroC3	Fe-Fe hydrogenase Group C3
+hydroFe	Fe-Fe hydrogenase Group Fe
