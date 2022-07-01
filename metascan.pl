@@ -1332,7 +1332,7 @@ foreach my $bin (@fastas) {
    my $BLASTPCMD = "blastp -query - -db %d -evalue %e -num_threads 1 -num_descriptions 1 -num_alignments 1 -seg no";
 
    my @blastdatabase = ({
-      DB  => "/usr/local/bioinfo/prokka/db/kingdom/Bacteria/sprot",
+      DB  => "$DBDIR/kingdom/Bacteria/sprot",
       SRC => 'similar to AA sequence:UniProtKB:',
       FMT => 'blast',
       CMD => $BLASTPCMD,},

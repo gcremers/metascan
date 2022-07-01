@@ -1,0 +1,6 @@
+1.1
+
+* Updated dependency check
+  Only dependencies that are needed are checked
+* The BLASTn directory is redirected correctly
+
