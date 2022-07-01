@@ -1,6 +1,7 @@
 # Metascan
 
-> _**Databases and auxillary files can be found -> [here](https://www.microbiology.science.ru.nl/gcremers/)_** <-
+
+> _**Databases and auxillary files can be found -> [here](https://www.microbiology.science.ru.nl/gcremers/)_ <- or ->[here](https://zenodo.org/record/6365663)<-**
 
 
 > _**The file used for coverage should be parsed to the following format (Checkm Optional):_
