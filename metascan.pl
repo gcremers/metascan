@@ -48,6 +48,7 @@ use File::Basename;
 # Change these two URL to the location where your databases are stored: The auxillary files also go into the databasedir.
 my $databasedir="/path/to/metascan_databases";
 my $databasedir_blastn="/path/to/blast/nt_v5";
+my $prokkaloc="prokka --listdb path here";
 
 # When using a custom HMM profile, add: <code> #CYCLE <tab> cycle_name </code> to the first line of the hmm profile in  order to give it a cycle name    
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -134,6 +135,7 @@ my %tools = (
      GETVER  => "hmmpress -h | grep '^# HMMER'",
      REGEXP  => qr/HMMER\s+($BIDEC)/,
      MINVER  => "3.1", #3.2 might cause problems in building databases because of similar DESC fields
+ #    MAXVER  => "3.1",
      NEEDED  => 1,
    },
    'tbl2asn' => {
@@ -881,7 +883,7 @@ foreach my $bin (@fastas) {
          msg("Using --prokka or --ncrna : Predicting ncRNAs");
          #my $cmdb = "$DBDIR/cm/$kingdom";
          #my $cmdb= "$databasedir/Rfam.cm";
-         my $cmdb= "/usr/local/bioinfo/prokka/db/cm/Bacteria";
+         my $cmdb= "$prokkaloc/cm/Bacteria";
          msg("Preparing HMMER annotation source");
          -r "$cmdb.i1m" or err("Your CM is not indexed, please run: cmpress $cmdb #*Make sure to use the full path");
          if (-r "$cmdb.i1m") {
@@ -1332,7 +1334,7 @@ foreach my $bin (@fastas) {
    my $BLASTPCMD = "blastp -query - -db %d -evalue %e -num_threads 1 -num_descriptions 1 -num_alignments 1 -seg no";
 
    my @blastdatabase = ({
-      DB  => "$DBDIR/kingdom/Bacteria/sprot",
+      DB  => "$prokkaloc/kingdom/Bacteria/sprot",
       SRC => 'similar to AA sequence:UniProtKB:',
       FMT => 'blast',
       CMD => $BLASTPCMD,},
@@ -2699,14 +2701,14 @@ for my $cyc (sort keys %processKO){
    print {$totproc_tsv_fh} "\n";#here would come the sum of each of all the processes
 }
 
-
+delfile ("$dir/analyzedfastas.txt", "$dir/gensum.txt", "$dir/gendepthsum.txt", "$dir/orgdepthsum.txt", "$dir/keggsum.txt", "$dir/file_hash.txt");
 
 #creating Krona files:
 
 runcmd("ktImportText \Q$dir/krona.g.tsv,Genes\E \Q$dir/krona.gd.tsv,Gene Depth\E \Q$dir/krona.o.tsv,Organisms\E \Q$dir/krona.od.tsv,Organism Depth\E \Q$dir/krona.mod.g.tsv,Modules Genes\E \Q$dir/krona.mod.gd.tsv,Modules Gene Depth\E \Q$dir/krona.mod.o.tsv,Modules Organisms\E \Q$dir/krona.mod.od.tsv,Modules Organism Depth\E \Q$dir/krona.proc.g.tsv,Process Genes\E \Q$dir/krona.proc.gd.tsv,Process Gene Depth\E \Q$dir/krona.proc.o.tsv,Process Organisms\E \Q$dir/krona.proc.od.tsv,Process Organism Depth\E -o $dir/krona.html");
 
 delfile ("$dir/krona.mod.g.tsv", "$dir/krona.mod.o.tsv", "$dir/krona.mod.od.tsv", "$dir/krona.mod.gd.tsv", "$dir/krona.proc.g.tsv", "$dir/krona.proc.o.tsv", "$dir/krona.proc.od.tsv", "$dir/krona.proc.gd.tsv", "$dir/krona.o.tsv", "$dir/krona.od.tsv", "$dir/krona.gd.tsv", "$dir/krona.g.tsv");
-delfile ("$dir/analyzedfastas.txt", "$dir/gensum.txt", "$dir/gendepthsum.txt", "$dir/orgdepthsum.txt", "$dir/keggsum.txt", "$dir/file_hash.txt"); #remove this line and the restore option can be used as a append option
+ #remove this line and the restore option can be used as a append option
 
 # to iterate over multiple directories, go the root/base/home directory from where your subdirs are and run : for dir in */; do  cd $dir && /path/fastaextract_desc_id.pl *.all.faa methanol ../methanol &&  cd ..; done
 #change methanol to whatever you want, this is your search term. The second one is the name of the fasta in the base directory

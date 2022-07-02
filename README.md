@@ -24,8 +24,30 @@ Furthermore, it utilizes the Kegg pathways for a complete metabolic overview of 
 Samples can be analyzed as eiter binned or unbinned metagenome.
 
 Metascan consists of a perl script, a few auxillary (text-)files and a set of HMM profiles, created by clustering TrEmbl proteins, based on Kegg K-numbers.
-Since it is a Prokka adaptation, it can therefor be run on any system that can already run Prokka, just by downloading the script and the databases, without the use of inception-software. The only modification that needs to be done is to direct the script to the right location of the database.
 
+**INSTALLATION pointers:**
+
+Since it is a Prokka adaptation, it should be able run on any system that can already run Prokka, just by downloading the script and the databases. The only modification that needs to be done is to direct the script to the right location of the database.
+
+The conda Prokka environment can also be used.
+
+However, when using the Prokka conda environment, there can be some issues. 
+
+SignalP has to be requested before it can be downloaded from the website and can be found here: https://services.healthtech.dtu.dk/service.php?SignalP-5.0. It contains a bin file that can be put in PATH
+
+The maximum version for hmmpress is 3.1b2 and can be found  here http://eddylab.org/software/hmmer3/3.1b2/
+Higer versions are too stricked to index the Metascan databases.
+Version hmmer-3.1b2-linux-intel-x86_64.tar.gz contains precompiled bin files.
+
+Once the databases are indexed, the version doesn really matter anymore. That is why there is no maxiumum version set to this in the script.
+
+When the cmpress and BLASTP don't have the right path, the easiest way to fix this is to run: prokka --listdb
+This will show a  line like this:
+[09:44:41] Looking for databases in: /usr/local/bioinfo/prokka/db
+
+in lines 51, you should enter that location in the $prokkaloc placeholder.
+
+Krona is not needed to run Metascan right now, but it will leave you with some additional files if you don't.
 
 **So, what can it do?**
 
@@ -75,13 +97,13 @@ Prokka:
 - parallel    MINVER  => "20130422"
 - prodigal    MINVER  => "2.6",     MAXVER  => "2.69"
 - hmmsearch   MINVER  => "3.1"
-- hmmpress    MINVER  => "3.1", #3.2 might cause problems in building databases because of similar DESC fields
+- hmmpress    MINVER  => "3.1", #3.2 causes problems in building databases because of similar DESC fields
 - tbl2asn     MINVER  => "24.3"
 - rnammer     MINVER  => "1.2"
 - barrnap     MINVER  => "0.4"
 - blastn      MINVER  => "2.1", #This is actually 2.2, but since were at 2.10 now, the comp thinks were at 2.1 again
 - blastp      MINVER  => "2.1"
-- signalp     MINVER  => "3.0"
+- signalp     MINVER  => "3.0" max 5.0
 - aragorn     MINVER  => "1.2"
 - minced      MINVER  => "1.6"
 - cmscan      MINVER  => "1.1"
@@ -91,7 +113,7 @@ Prokka:
 Optional:
 - bwa         MINVER  => "0.7"
 - checkm      MINVER  => "1"
-- samtools    MINVER  => "1.6"
+- samtools    MINVER  => "1.1" #This is actually 1.6, but since were at 1.13 now
 
 
 To be removed from Metascan:
