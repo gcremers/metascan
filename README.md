@@ -13,7 +13,7 @@
 
 
 
-
+Due to Github issues on my part, the initial Github repository is now named metascan-old.
 
 **Metabolic scanning and annotation of Metagenomes**
 
@@ -27,7 +27,7 @@ Metascan consists of a perl script, a few auxillary (text-)files and a set of HM
 
 **INSTALLATION pointers:**
 
-Since it is a Prokka adaptation, it should be able run on any system that can already run Prokka, just by downloading the script and the databases. The only modification that needs to be done is to direct the script to the right location of the database.
+Since it is a Prokka adaptation, it should be able to run on any system that can already run Prokka, just by downloading the script and the databases. The only modification that needs to be done is to direct the script to the right location of the database. Metascan is however based on an already older version of Prokka, so some inconsistencies can pop up here and there. 
 
 The conda Prokka environment can also be used.
 
@@ -35,14 +35,15 @@ However, when using the Prokka conda environment, there can be some issues.
 
 SignalP has to be requested before it can be downloaded from the website and can be found here: https://services.healthtech.dtu.dk/service.php?SignalP-5.0. It contains a bin file that can be put in PATH
 
-The maximum version for hmmpress is 3.1b2 and can be found  here http://eddylab.org/software/hmmer3/3.1b2/
-Higer versions are too stricked to index the Metascan databases.
+The maximum version for hmmpress is 3.1b2 and can be found here:  http://eddylab.org/software/hmmer3/3.1b2/
+Higher versions are too strict to index the Metascan databases.
 Version hmmer-3.1b2-linux-intel-x86_64.tar.gz contains precompiled bin files.
 
 Once the databases are indexed, the version doesn really matter anymore. That is why there is no maxiumum version set to this in the script.
 
 When the cmpress and BLASTP don't have the right path, the easiest way to fix this is to run: prokka --listdb
 This will show a  line like this:
+
 [09:44:41] Looking for databases in: /usr/local/bioinfo/prokka/db
 
 in lines 51, you should enter that location in the $prokkaloc placeholder.
