@@ -6,3 +6,8 @@ Due to unforseen Github issues, the original entry can now be found under gcreme
   Only dependencies that are needed are checked
 * The BLASTn directory is redirected correctly
 
+* Prokka Databases are automatiaclly detected, provided Pokka is installed
+* Prokka installation is now required when using legacy prokka options   
+
+* an embl file is created for easy upload to ENA
+

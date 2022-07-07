@@ -45,10 +45,16 @@ use lib "$FindBin::RealBin/../perl5"; # for bundled Perl modules
 use File::Path qw(remove_tree);
 use File::Basename;
 
-# Change these two URL to the location where your databases are stored: The auxillary files also go into the databasedir.
+
+#finding Prokka databases
+my $prokpath = qx(which prokka);
+chomp $prokpath; 
+my $absFilePath = abs_path("$prokpath");
+my ($dbloc)= split('/prokka', $absFilePath);
+
+# Change these three paths to the location where your databases are stored: The auxillary files also go into the databasedir.
 my $databasedir="/path/to/metascan_databases";
 my $databasedir_blastn="/path/to/blast/nt_v5";
-my $prokkaloc="prokka --listdb path here";
 
 # When using a custom HMM profile, add: <code> #CYCLE <tab> cycle_name </code> to the first line of the hmm profile in  order to give it a cycle name    
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -180,12 +186,12 @@ my %tools = (
 #    MINVER  => "2.2",
 #    NEEDED  => 0,  # only if --proteins used /remove?
 #  },
-#   'metabat2' => {
-#     GETVER  => "metabat2 -h 2>&1 | grep 'MetaBAT'",
-#     REGEXP  => qr/version\s+($BIDEC)/,
-#     MINVER  => "2.12",
-#     NEEDED  => 0, # remove 
-#   },
+   'prokka' => {
+     GETVER  => "prokka --version 2>&1",
+     REGEXP  => qr/prokka\s+($BIDEC)/,
+     MINVER  => "1.0",
+     NEEDED  => 0,
+   },
    'samtools' => {
      GETVER  => "samtools 2>&1 | grep 'Version'",
      REGEXP  => qr/Version:\s+($BIDEC)/,
@@ -256,6 +262,7 @@ if ($prokka){
    $tools{'minced'}{'NEEDED'}=1;
    $tools{'cmscan'}{'NEEDED'}=1;   
    $tools{'cmpress'}{'NEEDED'}=1;
+   $tools{'prokka'}{'NEEDED'}=1;
 }
 if ($mapping){
    $tools{'samtools'}{'NEEDED'}=1;   
@@ -881,9 +888,7 @@ foreach my $bin (@fastas) {
    if ($toobig == 0){
       if ($prokka or $ncrna) {
          msg("Using --prokka or --ncrna : Predicting ncRNAs");
-         #my $cmdb = "$DBDIR/cm/$kingdom";
-         #my $cmdb= "$databasedir/Rfam.cm";
-         my $cmdb= "$prokkaloc/cm/Bacteria";
+         my $cmdb= "$dbloc/prokka/db/cm/Bacteria";
          msg("Preparing HMMER annotation source");
          -r "$cmdb.i1m" or err("Your CM is not indexed, please run: cmpress $cmdb #*Make sure to use the full path");
          if (-r "$cmdb.i1m") {
@@ -1334,7 +1339,7 @@ foreach my $bin (@fastas) {
    my $BLASTPCMD = "blastp -query - -db %d -evalue %e -num_threads 1 -num_descriptions 1 -num_alignments 1 -seg no";
 
    my @blastdatabase = ({
-      DB  => "$prokkaloc/kingdom/Bacteria/sprot",
+      DB  => "$dbloc/prokka/db/kingdom/Bacteria/sprot",
       SRC => 'similar to AA sequence:UniProtKB:',
       FMT => 'blast',
       CMD => $BLASTPCMD,},
@@ -1528,15 +1533,7 @@ foreach my $bin (@fastas) {
          print {$gff_fh} $f->gff_string($gff_factory),"\n";
          my ($L,$R) = ($f->strand >= 0) ? ($f->start,$f->end) : ($f->end,$f->start);
 
-#start van de contig =1
-#einde van de contig =$eindecontig
-# als start van het eiwit geen startcodon is, dan <
-# als einde van het eiwit geen stopcodon is, dan >
-
-# als start van het eiwit geen startcodon is, dan <
-# als einde van het eiwit geen stopcodon is, dan >
-
-         #add > or < to partial tranlsations for gbk file and subsequent submission
+         # add > or < to partial translations for gbk file and subsequent submission
          # mark partial genes on the ends of the contigs
 
          if (($L <= 3 or $L >= $seq{$sid}{DNA}->length - 2) and ($R >= $seq{$sid}{DNA}->length - 2 or $R <= 3)) { print {$tbl_fh} "<$L\t>$R\t",$f->primary_tag,"\n";} #check if this works as it should
@@ -2009,7 +2006,7 @@ foreach my $bin (@fastas) {
    msg("Walltime used: $pretty");
    msg("If you use this result please cite the Metascan paper:");
    msg("This script is based on: Seemann T (2014) Prokka: rapid prokaryotic genome annotation. Bioinformatics. 30(14):2068-9.");
-   msg("Type 'prokka --citation' for more details.");
+   msg("Type 'metascan . --citation' for more details.");
    msg("************************************");
   
    undef $outdir;
@@ -2207,31 +2204,31 @@ EOCITE
    #----------------------------------------------------------------------
 
    sub kingdoms {
-      return map { m{kingdom/(\w+?)/}; $1 } glob("$DBDIR/kingdom/*/*.pin");
+      return map { m{kingdom/(\w+?)/}; $1 } glob("$dbloc/prokka/db/kingdom/*/*.pin");
    }
 
    sub genera {
-      return map { m{([^/]+)(\.\d+)?\.pin$}; $1 } glob("$DBDIR/genus/*.pin");
+      return map { m{([^/]+)(\.\d+)?\.pin$}; $1 } glob("$dbloc/prokka/db/genus/*.pin");
    }
 
    sub hmms {
-      return map { m{([^/]+)\.hmm\.h3m$}; $1 } glob("$DBDIR/hmm/*.h3m");
+      return map { m{([^/]+)\.hmm\.h3m$}; $1 } glob("$dbloc/prokka/db/hmm/*.h3m");
    }
 
    sub cms {
-      return map { m{([^/]+)\.i1m$}; $1 } glob("$DBDIR/cm/*.i1m");
+      return map { m{([^/]+)\.i1m$}; $1 } glob("$dbloc/prokka/db/cm/*.i1m");
    }
 
    #----------------------------------------------------------------------
 
-#   sub list_db {
-#      msg( "Looking for databases in: $DBDIR" );
-#      msg( "* Kingdoms:", kingdoms() );
-#      msg( "* Genera:", genera() );
-#      msg( "* HMMs:", hmms() );
-#     msg( "* CMs:", cms() );
-#      exit(0);
-#   }
+   sub list_db {
+      msg( "Looking for Prokka databases in: $dbloc/prokka/db" );
+      msg( "* Kingdoms:", kingdoms() );
+      msg( "* Genera:", genera() );
+      msg( "* HMMs:", hmms() );
+     msg( "* CMs:", cms() );
+      exit(0);
+   }
 
 
    #----------------------------------------------------------------------
@@ -2271,8 +2268,8 @@ EOCITE
         {OPT=>"debug!",         VAR=>\$debug,         DEFAULT=>0,          DESC=>"Debug mode: keep all temporary files"},
         {OPT=>"restore!",       VAR=>\$restore,       DEFAULT=>0,          DESC=>"Restore data and restart from breaking point"},
        
-#        "\nSetup:",
-#        {OPT=>"listdb",         VAR=>\&list_db,                            DESC=>"List all configured databases"},
+        "\nSetup:",
+        {OPT=>"listdb",         VAR=>\&list_db,                            DESC=>"List all configured Prokka databases"},
 #        {OPT=>"setupdb",        VAR=>\&setup_db,                           DESC=>"Index all installed databases. Manually please until thoroughly checked"},
 #        {OPT=>"cleandb",        VAR=>\&clean_db,                           DESC=>"Remove all database indices"},
 #        {OPT=>"depends",        VAR=>\&list_depends,                       DESC=>"List all software dependencies"},
