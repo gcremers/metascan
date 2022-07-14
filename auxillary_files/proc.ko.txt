@@ -54,7 +54,7 @@ Nitrogen Cycle	Ammonium oxidation	K10535
 Nitrogen Cycle	Nitrite oxidation	K00371	K00370	K00374	K02568	K02567
 Nitrogen Cycle	Nitrite oxidation	K00367	K00372	K00360	K10534
 Nitrogen Cycle	Anammox (core)	K20932	K20934	K20933	K20935
-Nitrogen Cycle	Annamox	K00372	K00360
+Nitrogen Cycle	Anammox	K00372	K00360
 Nitrogen Cycle	Nitrogen fixation	K02588	K02586	K02591	K00531	
 Nitrogen Cycle	N-compounds	K01721	K20807
 Nitrogen Cycle	N-compounds	K01725
