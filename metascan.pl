@@ -41,6 +41,7 @@ use Bio::Tools::GuessSeqFormat;
 use FindBin;
 use 5.010;
 use Cwd qw(getcwd);
+use Cwd qw(abs_path);
 use lib "$FindBin::RealBin/../perl5"; # for bundled Perl modules
 use File::Path qw(remove_tree);
 use File::Basename;
@@ -73,7 +74,7 @@ my @CMDLINE = ($0, @ARGV);
 my $OPSYS = $^O;
 my $BINDIR = "$FindBin::RealBin/../binaries/$OPSYS";
 my $EXE = $FindBin::RealScript;
-my $VERSION = "1.0.1";
+my $VERSION = "1.2";
 my $AUTHOR = 'G. Cremers';
 my $URL = 'gitlab.science.ru.nl/gcremers/metascan';
 my $METASCAN_PMID = 'nan';
@@ -85,7 +86,6 @@ my $MAXCONTIGIDLEN = 37;  # Genbank rule
 my $SIGNALP_MAXSEQ = 10_000;  # maximum allowed input for signalp
 my @LOG; # buffer up log lines before we have log file ready
 my $dir = shift @ARGV // 'An empty entry';
-
 
 
 my $KEGG_hmm="$databasedir/meta.nonkey";
@@ -110,7 +110,7 @@ my $process_file="$databasedir/proc.ko.txt";
 
 # command line options 
 
-my(@Options, $quiet, $debug, $kingdom, $force,$outdir, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $rnammer, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore); #$stringent
+my(@Options, $quiet, $debug, $kingdom, $force,$outdir, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $rnammer, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore,,$cut_nc, $cut_tc, $threshold); 
 
 setOptions();
 
@@ -643,15 +643,7 @@ foreach my $bin (@fastas) {
    $gcode ||= 11;
    msg("Using genetic code table $gcode.");
    ($gcode < 1 or $gcode > 25) and err("Invalid genetic code, must be 1..25");
-   # set settings for stringency
-   #my $stringent2=$stringent;
-   #if ($stringent=~ m/eva/i) 
-   #   {$stringent2 = "-E %e";}
-   my $stringent2= "-E %e";
-
-   # these should accept hmm on STDIN and write report to STDOUT
-   my $HMMER3CMD = "hmmsearch $stringent2   --noali --notextw --acc --cpu 1 - $dir/mytargets.faa";
-                 
+             
    # check BioPerl version
    my $minbpver = "1.006002"; # for Bio::SearchIO::hmmer3
    my $bpver = $Bio::Root::Version::VERSION;
@@ -1153,17 +1145,20 @@ foreach my $bin (@fastas) {
    }
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Annotate CDS:primary data source is a set of HMM profiles of 126 metabolic proteins
- 
+
+    # set options for stringency
+
+   my $threshold = "-E %e";
+   if ($cut_nc) {$threshold = '--cut_nc'};
+   if ($cut_tc) {$threshold = '--cut_tc'};
+
+   # these should accept hmm on STDIN and write report to STDOUT
+   my $HMMER3CMD = "hmmsearch $threshold   --noali --notextw --acc --cpu 1 - $dir/mytargets.faa";
+
    foreach my $i (@hmmdatabases) {
       msg("Preparing HMMER annotation source");
       -r "$i.h3i" or err("Your HMM is not indexed, please run: hmmpress $i #*Make sure to use the full path");
       my $src = $i;
-      #my $strngt;  #No NC or TC values are known. So we cannot use stringency setting other than evalue
-      #if ($i eq $KEGG_hmm){
-      #   $strngt = '--cut_tc';}
-      #else {
-      #   $strngt = '--cut_nc';}
-
       $src =~ s{^.*/}{};
       $src =~ s/.hmm$//;
       msg("Using /inference source as '$src'");
@@ -1174,8 +1169,7 @@ foreach my $bin (@fastas) {
          CMD => $HMMER3CMD,
          ID =>  $src,
          VERSION => 3,
-         #STRNGT => $strngt,
-         STRNGT => $eval,
+         STRNGT => $threshold, #prefilter
       };
    }
    # we write out all the CDS which haven't been annotated yet and then search them
@@ -1207,7 +1201,7 @@ foreach my $bin (@fastas) {
    #     $cmd =~ s/%o/{}.out/g;
          $cmd =~ s/%e/$eval/g;
          $cmd =~ s,%d,$db->{DB},g;
-         $cmd =~ s/$stringent2/$db->{STRNGT}/g;
+         $cmd =~ s/$threshold/$db->{STRNGT}/g;
 
       msg("Annotating with >>> $db->{STRNGT} <<<");
 
@@ -2297,10 +2291,11 @@ EOCITE
         {OPT=>"gram=s",         VAR=>\$gram,          DEFAULT=>'',         DESC=>"Gram: -/neg +/pos"},
  
         "\nComputation:",
+        {OPT=>"cut_nc!",       VAR=>\$cut_nc,         DEFAULT=>'',         DESC=>"Use cut-nc instead of evalue for HMM threshold. WILL NOT RESULT IN OVERVIEW FILES (yet)"},
+        {OPT=>"cut_tc!",       VAR=>\$cut_tc,         DEFAULT=>'',         DESC=>"Use cut-tc instead of evalue for HMM threshold. WILL NOT RESULT IN OVERVIEW FILES (yet)"},
         {OPT=>"cpus=i",         VAR=>\$cpus,          DEFAULT=>8,          DESC=>"Number of CPUs to use [0=all]"},
-        {OPT=>"mincontiglen=i", VAR=>\$mincontiglen,  DEFAULT=>1,        DESC=>"Minimum contig size [NCBI needs 200]"},
+        {OPT=>"mincontiglen=i", VAR=>\$mincontiglen,  DEFAULT=>1,          DESC=>"Minimum contig size [NCBI needs 200]"},
         {OPT=>"rnammer!",       VAR=>\$rnammer,       DEFAULT=>0,          DESC=>"Prefer RNAmmer over Barrnap for rRNA prediction"},
-        #{OPT=>"stringent=s",   VAR=>\$stringent,     DEFAULT=>'cut_nc',   DESC=>"Set stringent to [x]=evalue (use with --evalue)"},
         {OPT=>"evalue=f",       VAR=>\$eval,          DEFAULT=>1E-06,      DESC=>"Similarity e-value cut-off for RNA and small proteins"},
         {OPT=>"e-kegg=f",       VAR=>\$ekegg,         DEFAULT=>1E-50,      DESC=>"E-value cut-off for big proteins with the use of the Kegg database"},
         {OPT=>"e-nokegg=f",     VAR=>\$enokegg,       DEFAULT=>1E-100,     DESC=>"E-value cut-off for big proteins for key genes only"},
@@ -2698,14 +2693,13 @@ for my $cyc (sort keys %processKO){
    print {$totproc_tsv_fh} "\n";#here would come the sum of each of all the processes
 }
 
-delfile ("$dir/analyzedfastas.txt", "$dir/gensum.txt", "$dir/gendepthsum.txt", "$dir/orgdepthsum.txt", "$dir/keggsum.txt", "$dir/file_hash.txt");
+delfile ("$dir/analyzedfastas.txt", "$dir/gensum.txt", "$dir/gendepthsum.txt", "$dir/orgdepthsum.txt", "$dir/keggsum.txt", "$dir/file_hash.txt"); #remove this line and the restore option can be used as a append option
 
 #creating Krona files:
 
 runcmd("ktImportText \Q$dir/krona.g.tsv,Genes\E \Q$dir/krona.gd.tsv,Gene Depth\E \Q$dir/krona.o.tsv,Organisms\E \Q$dir/krona.od.tsv,Organism Depth\E \Q$dir/krona.mod.g.tsv,Modules Genes\E \Q$dir/krona.mod.gd.tsv,Modules Gene Depth\E \Q$dir/krona.mod.o.tsv,Modules Organisms\E \Q$dir/krona.mod.od.tsv,Modules Organism Depth\E \Q$dir/krona.proc.g.tsv,Process Genes\E \Q$dir/krona.proc.gd.tsv,Process Gene Depth\E \Q$dir/krona.proc.o.tsv,Process Organisms\E \Q$dir/krona.proc.od.tsv,Process Organism Depth\E -o $dir/krona.html");
 
 delfile ("$dir/krona.mod.g.tsv", "$dir/krona.mod.o.tsv", "$dir/krona.mod.od.tsv", "$dir/krona.mod.gd.tsv", "$dir/krona.proc.g.tsv", "$dir/krona.proc.o.tsv", "$dir/krona.proc.od.tsv", "$dir/krona.proc.gd.tsv", "$dir/krona.o.tsv", "$dir/krona.od.tsv", "$dir/krona.gd.tsv", "$dir/krona.g.tsv");
- #remove this line and the restore option can be used as a append option
 
 # to iterate over multiple directories, go the root/base/home directory from where your subdirs are and run : for dir in */; do  cd $dir && /path/fastaextract_desc_id.pl *.all.faa methanol ../methanol &&  cd ..; done
 #change methanol to whatever you want, this is your search term. The second one is the name of the fasta in the base directory

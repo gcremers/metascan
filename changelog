@@ -11,3 +11,11 @@ Due to unforseen Github issues, the original entry can now be found under gcreme
 
 * an embl file is created for easy upload to ENA
 
+1.2 (28 jul 2022)
+
+* Added the possibility to use NC or TC cutoffs during the prefiltering instead of evalue
+
+NOTE: This has been added in anticipation of a new database. Using this now on you own database will results in fasta files, but the overview files will not be produced as expected because Metascan needs specific ACC, DESC and NAME fields.
+Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will try to use databases that do not possess a NT or NC field and quit.
+
+
