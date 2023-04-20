@@ -144,11 +144,11 @@ my %tools = (
  #    MAXVER  => "3.1",
      NEEDED  => 1,
    },
-   'tbl2asn' => {
-     GETVER  => "tbl2asn - | grep '^tbl2asn'",
-     REGEXP  => qr/tbl2asn\s+($BIDEC)/,
-     MINVER  => "24.3",
-     NEEDED  => 1,
+  'tbl2asn' => {
+    GETVER  => "table2asn -version",
+    REGEXP  => qr/table2asn:\s+($BIDEC)/,
+    MINVER  => "1.27",
+    NEEDED  => 1,
    },
    'rnammer' => {
      GETVER  => "rnammer -V 2>&1 | grep -i 'rnammer [0-9]'",
