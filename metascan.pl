@@ -144,12 +144,12 @@ my %tools = (
  #    MAXVER  => "3.1",
      NEEDED  => 1,
    },
-  'tbl2asn' => {
-    GETVER  => "table2asn -version",
-    REGEXP  => qr/table2asn:\s+($BIDEC)/,
-    MINVER  => "1.27",
-    NEEDED  => 1,
-   },
+#  'tbl2asn' => {
+#    GETVER  => "table2asn -version",
+#    REGEXP  => qr/table2asn:\s+($BIDEC)/,
+#    MINVER  => "1.27",
+#    NEEDED  => 1,
+#   },
    'rnammer' => {
      GETVER  => "rnammer -V 2>&1 | grep -i 'rnammer [0-9]'",
      REGEXP  => qr/($BIDEC)/,
@@ -1955,7 +1955,7 @@ foreach my $bin (@fastas) {
          }
       }
    } 
-
+=pod
    #
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Use tbl2asn tool to make .gbk and .sqn for us
@@ -1993,6 +1993,8 @@ foreach my $bin (@fastas) {
       chomp;
       msg($_);
    }
+   
+=cut
    msg("Annotation finished successfully.");
    my $endtime = localtime;
    my $walltime = $endtime - $starttime;
