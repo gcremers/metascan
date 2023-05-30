@@ -54,8 +54,13 @@ my $absFilePath = abs_path("$prokpath");
 my ($dbloc)= split('/prokka', $absFilePath);
 
 # Change these three paths to the location where your databases are stored: The auxillary files also go into the databasedir.
-my $databasedir="/path/to/metascan_databases";
-my $databasedir_blastn="/path/to/blast/nt_v5";
+#my $databasedir="/path/to/metascan_databases";
+#my $databasedir_blastnt="/path/to/blast/nt_v5";
+#my $databasedir_blastn="/path/to/blast/16S_ribosomal_RNA";
+
+my $databasedir="/vol/micro-databases/metascan";
+my $databasedir_blastnt="/vol/micro-databases/blast/nt";
+my $databasedir_blastn="/vol/micro-databases/blast16S/16S_ribosomal_RNA";
 
 # When using a custom HMM profile, add: <code> #CYCLE <tab> cycle_name </code> to the first line of the hmm profile in  order to give it a cycle name    
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -74,7 +79,7 @@ my @CMDLINE = ($0, @ARGV);
 my $OPSYS = $^O;
 my $BINDIR = "$FindBin::RealBin/../binaries/$OPSYS";
 my $EXE = $FindBin::RealScript;
-my $VERSION = "1.2";
+my $VERSION = "1.3";
 my $AUTHOR = 'G. Cremers';
 my $URL = 'gitlab.science.ru.nl/gcremers/metascan';
 my $METASCAN_PMID = 'nan';
@@ -110,7 +115,7 @@ my $process_file="$databasedir/proc.ko.txt";
 
 # command line options 
 
-my(@Options, $quiet, $debug, $kingdom, $force,$outdir, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $rnammer, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore,,$cut_nc, $cut_tc, $threshold); 
+my(@Options, $quiet, $debug, $kingdom, $force,$outdir, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $rnammer, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore,,$cut_nc, $cut_tc, $threshold, $nt); 
 
 setOptions();
 
@@ -144,12 +149,12 @@ my %tools = (
  #    MAXVER  => "3.1",
      NEEDED  => 1,
    },
-#  'tbl2asn' => {
-#    GETVER  => "table2asn -version",
-#    REGEXP  => qr/table2asn:\s+($BIDEC)/,
-#    MINVER  => "1.27",
-#    NEEDED  => 1,
-#   },
+   'table2asn' => {
+    GETVER  => "table2asn -version",
+    REGEXP  => qr/table2asn:\s+($BIDEC)/,
+    MINVER  => "1.27",
+    NEEDED  => 1,
+   },
    'rnammer' => {
      GETVER  => "rnammer -V 2>&1 | grep -i 'rnammer [0-9]'",
      REGEXP  => qr/($BIDEC)/,
@@ -257,7 +262,6 @@ if ($rnammer){
 }
 if ($prokka){
    $tools{'blastp'}{'NEEDED'}=1;
-   $tools{'signalp'}{'NEEDED'}=1;
    $tools{'aragorn'}{'NEEDED'}=1;
    $tools{'minced'}{'NEEDED'}=1;
    $tools{'cmscan'}{'NEEDED'}=1;   
@@ -359,6 +363,9 @@ if ($hmms){
 if (!$nokegg){
    push @hmmdatabases, $KEGG_hmm;}
 
+if ($nt){
+   $databasedir_blastn=$databasedir_blastnt;
+}
 
 my @combined_cycles;
 my %cycles_krona;
@@ -647,8 +654,9 @@ foreach my $bin (@fastas) {
    # check BioPerl version
    my $minbpver = "1.006002"; # for Bio::SearchIO::hmmer3
    my $bpver = $Bio::Root::Version::VERSION;
+   my ($bpv) = $bpver =~ qr/^(\d+\.\d+)/;     
    msg("You have BioPerl $bpver");
-   err("Please install BioPerl $minbpver or higher") if $bpver < $minbpver;
+   err("Please install BioPerl $minbpver or higher") if $bpv < $minbpver;
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Determine CPU cores available
@@ -1488,7 +1496,7 @@ foreach my $bin (@fastas) {
    open my $kegg_fh, '>', "$dir/$outdir/$prefix.kegg";
    open my $hmm_tot_fh, '>>', "$dir/metagenome.tsv";
    open my $ovw_fh, '>', "$dir/$outdir/$prefix.ovw";
-   open my $tbl_fh, '>', "$dir/$outdir/$prefix.tbl";
+   open my $tbl_fh, '>', "$dir/$outdir/$prefix.tabel";
    my $faa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.hmm.faa", -format=>'fasta');
    my $ffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.hmm.ffn", -format=>'fasta');
    my $f16_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.f16", -format=>'fasta');
@@ -1955,7 +1963,7 @@ foreach my $bin (@fastas) {
          }
       }
    } 
-=pod
+   
    #
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Use tbl2asn tool to make .gbk and .sqn for us
@@ -1969,11 +1977,13 @@ foreach my $bin (@fastas) {
       my $tbl2asn_opt = @seq > 10_000 ? '-M b' : '-M n';  # Issue 93 - big assemblies
 
       msg("Generating Genbank and Sequin files");
- 
       runcmd(
-      "tbl2asn -V b -a r10k -l paired-ends $tbl2asn_opt -N 1 -y 'Annotated using $EXE $VERSION from $URL'".
-      " -Z \Q$dir/$outdir/$prefix.err\E -i \Q$dir/$outdir/$prefix.fsa\E 2> /dev/null"
-      );
+        "table2asn -V b -a s -verbose -U -N 1 -c befw -W -locus-tag-prefix $locustag -i \Q$dir/$outdir/$prefix.fsa\E ");  
+
+#      runcmd(
+#      "tbl2asn -V b -a r10k -l paired-ends $tbl2asn_opt -N 1 -y 'Annotated using $EXE $VERSION from $URL'".
+#      " -Z \Q$dir/$outdir/$prefix.err\E -i \Q$dir/$outdir/$prefix.fsa\E 2> /dev/null"
+#      );
       delfile("$dir/$outdir/errorsummary.val");
       delfile( map { "$dir/$outdir/$prefix.$_" } qw(dr fixedproducts ecn val) );
 
@@ -1994,7 +2004,7 @@ foreach my $bin (@fastas) {
       msg($_);
    }
    
-=cut
+
    msg("Annotation finished successfully.");
    my $endtime = localtime;
    my $walltime = $endtime - $starttime;
@@ -2310,6 +2320,7 @@ EOCITE
         {OPT=>"depth=s",        VAR=>\$depth,         DEFAULT=>'',         DESC=>"Include Depth of Genes. Use the Binmate TSV overview file"},
         {OPT=>"checkm!",        VAR=>\$checkmqi,      DEFAULT=>'',         DESC=>"CheckM for Bin Quality Control and Identification"},
         {OPT=>"mapping=s",      VAR=>\$mapping,       DEFAULT=>'',         DESC=>"Map reads to genes. Requires dir name containing FASTQ file(s)"},
+        {OPT=>"nt!",            VAR=>\$nt,            DEFAULT=>0,          DESC=>"Run nt databse for 16S BLAST"}, 
 
         "\nProkka annotation options",
         {OPT=>"prokka!",        VAR=>\$prokka,        DEFAULT=>'',         DESC=>"Use all prokka options; Combine with --compliant when submition is an option"},

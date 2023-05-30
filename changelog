@@ -18,4 +18,10 @@ Due to unforseen Github issues, the original entry can now be found under gcreme
 NOTE: This has been added in anticipation of a new database. Using this now on you own database will results in fasta files, but the overview files will not be produced as expected because Metascan needs specific ACC, DESC and NAME fields.
 Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will try to use databases that do not possess a NT or NC field and quit.
 
+1.3 (may 30 ,2023)
 
+* Changed the database to the 16S_ribosomal_RNA database of NCBI, since this is a lot faster.
+
+* Adapted Metascan for the table2asn of that some NCBI
+
+* Added a template figure for constructing the cycles

@@ -3,6 +3,9 @@
 
 > _**Databases and auxillary files can be found -> [here](https://www.microbiology.science.ru.nl/gcremers/)_ <- or ->[here](https://zenodo.org/record/6365663)<-**
 
+The default database for the 16S BLAST is now the 16S database of NCBI, since this one is a lot a faster than the nt Database. The nt database is still available as an option.
+
+The new database can be found at NCBI : https://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz
 
 > _**The file used for coverage should be parsed to the following format (Checkm Optional):_
 > 
