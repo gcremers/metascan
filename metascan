@@ -955,7 +955,7 @@ if ($compliant) {
    if ($toobig == 0){
       if ($prokka or $ncrna) {
          msg("Using --prokka or --ncrna : Predicting ncRNAs");
-         my $cmdb= "$databasedir/cm/Bacteria";
+         my $cmdb= "$databasedir/cm/$kingdom";
          msg("Preparing HMMER annotation source");
          -r "$cmdb.i1m" or err("Your CM is not indexed, please run: cmpress $cmdb #*Make sure to use the full path");
          if (-r "$cmdb.i1m") {
@@ -2441,7 +2441,7 @@ EOCITE
         {OPT=>"gcode=i",        VAR=>\$gcode,         DEFAULT=>0,          DESC=>"Genetic code / Translation table (set if --kingdom is set)"},
         {OPT=>"rawproduct!",    VAR=>\$rawproduct,    DEFAULT=>0,          DESC=>"Do not clean up /product annotation"},
         {OPT=>"norrna!",        VAR=>\$norrna,        DEFAULT=>0,          DESC=>"Don't run rRNA search"},
-        {OPT=>"gram=s",         VAR=>\$gram,          DEFAULT=>'',         DESC=>"Gram: -/neg +/pos"},
+#        {OPT=>"gram=s",         VAR=>\$gram,          DEFAULT=>'',         DESC=>"Gram: -/neg +/pos"},
  
         "\nComputation:",
         {OPT=>"cpus=i",         VAR=>\$cpus,          DEFAULT=>8,          DESC=>"Number of CPUs to use [0=all]"},
@@ -2602,7 +2602,7 @@ sub setup_db {
       }
    }  
    check_tool('cmpress');
-   for my $cm (<"$databasedir/cm/{Viruses,Bacteria}">) {
+   for my $cm (<"$databasedir/cm/{Viruses,Bacteria,Archaea}">) {
       unless (-e -s "$cm.i1i"){
          msg("Pressing CM database: $cm");    
          runcmd("cmpress \Q$cm\E");
