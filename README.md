@@ -1,21 +1,24 @@
 # Metascan
 
-## Welkom to Metascan, a Metagenomic Scanning and Annotation tool with an emphasis on metabolic genes.
+Metascan is a Metagenomic Scanning and Annotation tool with an emphasis on metabolic genes.
 
-### **Metabolic scanning and annotation of Metagenomes**
+## **Metabolic scanning and annotation of Metagenomes**
 
-Metascan is a Metagenomic Scanning and Annotation tool, with an emphasis on metabolic genes.
 The heart of Metascan is a set of metabolic core genes, that are used to paint a picture of the metabolic capacity of the sample.
 Furthermore, it utilizes the Kegg pathways for a complete metabolic overview of each sample.
 
 Samples can be analyzed as eiter binned or unbinned metagenome.
 
 Metascan consists of a perl script, a few auxillary (text-)files and a set of HMM profiles, created by clustering TrEmbl proteins, based on Kegg K-numbers.
+Recently three scripts have been added. One to download the databases and two to retrieve fastas from the analysed datasets. 
 
-### **INSTALLATION:**
+When Metascan was developped, it was based on Prokka, as Prokka already had most of the functionality that was needed and I had never written a script before.
+Because of this, Metascan would run if Prokka worked on the sytem.
 
-Due to recent changes in tabel2asn, it is alot more difficult to use Metascan if Prokka can run in an environment or system.
-Therefor, Metascan now has its own Conda environment. I have also used this update to include a viral sequence algorithm which is VERY! beta (see below).
+However, due a cascade of changes starting with a change of tbl2asn to tabel2asn, it is alot more difficult to use Metascan if Prokka can run in an environment or system.
+Therefor, Metascan now has its own Conda environment. This update was also used to include a viral sequence algorithm which is VERY! beta (see below).
+
+## **INSTALLATION:**
 
 To install Metascan, first clone Metascan to your system:
 
