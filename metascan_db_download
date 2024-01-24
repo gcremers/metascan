@@ -1,0 +1,450 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+###BREWCONDA###
+use SWISS::Entry;
+use SWISS::KW;
+#use SWISS::OC;
+use Data::Dumper;
+use JSON;
+use Term::ANSIColor qw(:constants);
+
+my(@Options, $verbose, $frag, $evlev, $minlen, $maxlen, $sep, $blank, $term, $hypo, $databasedir, $all, $protein, $cm, $metascan, $vog, $ribo, $checkm);
+setOptions();
+
+my @LOG;
+my $HYPO = 'hypothetical protein'; 
+my @tax =("Archaea", "Bacteria", "Viruses");
+   
+#create a directory 
+#Download UNIPROT_SPROT; CM; VOG; METASCAN DATA; 16Snt ;
+
+if (! $databasedir){ 
+   print "Please specify a location with --dbloc\n";
+}
+
+#chdir "$databasedir";
+runcmd("cp -r aux/ $databasedir");
+
+if ($all){
+   build_metascan();
+   build_protein();
+   build_cm();
+   build_VOG();
+   build_ribo();
+   build_checkm();
+}
+
+if ($metascan and ! $all){
+   build_metascan();
+}
+if ($protein and ! $all){
+   build_protein();
+}
+if ($cm and ! $all){
+   build_cm();
+}
+if ($vog and ! $all){
+   build_VOG();
+}
+if ($ribo and ! $all){
+   build_ribo();
+}
+
+if ($checkm and ! $all){
+   build_checkm();
+}
+
+##By default download Metascan database
+
+sub build_metascan {
+   print YELLOW "Downloading Metascan\n", RESET;
+   chdir "$databasedir";
+   if (-s -e $databasedir){
+      unless (-s -e "$databasedir/files"){
+         runcmd("wget -P $databasedir https://zenodo.org/api/records/6365663/files");
+      }
+      unless (-s -e "$databasedir/6365662"){
+         runcmd("wget -P $databasedir https://zenodo.org/record/6365662");
+      }
+      my $url ='https://zenodo.org/record/6365663';
+      runcmd("wget -N -nd -q $url/export/json");
+   }
+   else { 
+      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   } 
+   
+   my $json;
+   json('json', $json);
+#   print Dumper $json;
+   
+   my @hmm;
+   foreach my $key (keys %$json) {
+      if ($key =~  /^files/){
+         foreach my $a (keys %{ $$json {$key}}) { 
+            if ($a =~  /^entries/){  
+               foreach my $b (keys %{ $$json {$key}->{$a}}) { 
+                  push @hmm, $b;
+               }
+            }
+         }
+      } 
+   } 
+   foreach my $file (@hmm){
+      unless (-s -e "$databasedir/$file"){
+         if ("$databasedir/$file" =~ m/\.hmm$/ or "$databasedir/$file" =~ m/key$/){
+            runcmd("wget -P $databasedir -N -nd https://zenodo.org/records/6365663/files/$file");
+         } 
+         else {
+            unless (-s -e "$databasedir/aux/$file"){
+               runcmd("wget -P $databasedir/aux -N -nd https://zenodo.org/records/6365663/files/$file");
+            }
+         }
+      }
+      else {print RED "Skipping download\n", RESET};
+   }
+}
+
+sub build_VOG {
+   if (-s -e $databasedir){
+      print YELLOW "Downloading VOG\n", RESET;
+      unless (-s -e "$databasedir/virus/vog.hmm.tar.gz" or -s -e "$databasedir/virus/VOG.hmm"){
+         runcmd("wget -P $databasedir/virus/ https://fileshare.csb.univie.ac.at/vog/latest/vog.hmm.tar.gz");
+      }
+      else {print RED "Skipping download\n", RESET;}
+   }
+   else { 
+      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   } 
+   chdir "$databasedir/virus/";
+   print YELLOW "Extracting VOG\n", RESET;
+   if (-s -e "$databasedir/virus/vog.hmm.tar.gz"){
+      runcmd("tar -xOzf vog.hmm.tar.gz | cat - >> VOG");
+   }
+   else {print RED "Skipping download\n", RESET;}
+   unless (-s -e "$databasedir/virus/vog.annotations.tsv.gz" or -s -e "$databasedir/virus/vog.annotations.tsv"){
+      runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.annotations.tsv.gz");
+      runcmd("gunzip -f vog.virusonly.tsv.gz"); 
+   }
+   else {print RED "Skipping download\n", RESET;}
+   unless (-s -e "$databasedir/virus/vog.virusonly.tsv.gz" or -s -e "$databasedir/virus/vog.virusonly.tsv"){
+      runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.virusonly.tsv.gz");
+      runcmd("gunzip -f vog.annotations.tsv.gz");
+   }
+   else {print RED "Skipping download\n", RESET;}
+   
+   print YELLOW "Building VOG\n", RESET;
+   unless (-s -e "$databasedir/virus/VOG.hmm"){
+      my %VOG;
+      open (KO, "<vog.annotations.tsv") or die "Can't open META.KO.txt";
+      while (my $line = <KO>){
+         chomp $line;
+         my ($vogn, $b, $c, $d, $desc) = split(/\t/, $line, 5);
+         $VOG{$vogn}=$desc;
+      }
+      my $meta="VOG";
+      open my $in,  '<',  "$meta"      or die "Can't read old file: $!";
+      open my $out, '>', "$meta.hmm" or die "Can't write new file: $!";
+      print {$out} "#CYCLE PHAGE\n\n";
+      foreach  (<$in>)  {
+         if ($_ =~ /^NAME/) {
+            chomp $_;
+            my ($name, $fname) = split(/\s+/, $_, 2);
+            print {$out} "NAME  $fname\nACC   KO:PHAGE\n";
+            print {$out} "DESC  phagegene; $VOG{$fname}\n"; 
+         }
+         unless ($_ =~ m/^NAME/){
+         print {$out} $_;}
+      }
+   }
+   else {print RED "Skipping building\n", RESET;}
+}
+
+
+sub build_protein {
+   if (-s -e $databasedir){
+      print YELLOW "Downloading Proteins\n", RESET;
+      unless (-s -e "$databasedir/prokka/uniprot_sprot.dat.gz" or -s -e "$databasedir/prokka/uniprot_sprot"){
+         runcmd("wget -P $databasedir/prokka https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz");
+      #   runcmd("wget -P $databasedir/prokka https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.dat.gz.md5"); maybe later
+      #   my $lcl_digest = &compute_md5_checksum("$databasedir/prokka/uniprot_sprot.dat.gz"); print "lcl: $lcl_digest\n";
+      #   my $rmt_digest = &read_md5_file($checksum_file); print "rmt: $rmt_digest\n"; 
+         runcmd("gunzip $databasedir/prokka/uniprot_sprot.dat.gz");
+      }
+      else {print RED "Skipping download\n", RESET};
+   }   
+   else { 
+      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   } 
+   
+   print YELLOW "Building Proteins\n", RESET;
+   
+   unless (-s -e "$databasedir/prokka/uniprot_sprot"){
+      # Read an entire record at a time
+      local $/ = "\n//\n";
+
+      my $in=0;
+      my $out=0;
+
+      open(DAT, "<$databasedir/prokka/uniprot_sprot.dat") or die "Unable to open file $databasedir/prokka/uniprot_sprot.dat\n";
+      open my $sprot_fh , '>', "$databasedir/prokka/uniprot_sprot" or die "Could not open file\n";
+
+      while (<DAT>) {
+         # Read the entry
+         my $entry = SWISS::Entry->fromText($_);
+         $in++;
+
+         # Immediately reject partial genes
+         next if not $frag and $entry->isFragment;
+         next if not $frag and $entry->DEs->hasFragment;
+
+         # Too short or to long?
+         my $L = length($entry->SQs->seq);
+         next if $minlen > 0 and $L < $minlen;
+         next if $maxlen > 0 and $L > $maxlen;
+ 
+         # Reject on evidence level
+         # grep ^PE uniprot_sprot.dat | sort | uniq -c
+         #  74284 PE   1: Evidence at protein level;
+         #  67762 PE   2: Evidence at transcript level;
+         # 376894 PE   3: Inferred from homology;
+         #  14424 PE   4: Predicted;
+         #   1884 PE   5: Uncertain;
+         if ($evlev < 5) { 
+            $entry->PE->text =~ m/^(\d+)/;
+            next unless $1 <= $evlev; 
+         }
+
+         # Only specified organism class
+         if ($term) {
+            my $tax = $entry->OCs->list or next;
+            next unless grep { $_ eq $term } @$tax ;
+         }
+
+         # /gene code  
+         my $gene = $entry->GNs->getFirst || '';
+         $gene = '' if $gene =~ m/\d{2}/ or $gene =~ m/\./;
+
+         my $ec = ''; 
+         my $prod = ''; 
+         my $cog = '';
+
+         if (1) {
+            # [ 'eggNOG', 'COG4799', 'LUCA' ]
+            for my $dr ( @{ $entry->DRs->list } ) {
+   #           print Dumper($dr);
+               if ($dr->[1] =~ m/^(COG\d+)$/) {
+                  $cog = $1;
+               last;
+               }   
+            }
+          }
+
+          if (1) {  
+             for my $de ($entry->DEs->elements) {
+                if ($de->type eq 'EC') {
+	           $ec = $de->text;
+	           $ec =~ s/^\D*//;
+#	           last;
+               }
+               elsif ($de->type eq 'Full' and $de->category eq 'RecName') {
+	          $prod = $de->text;
+	          if ($prod =~ m/^UPF\d|^Uncharacterized protein|^ORF|^Protein /) {
+                     next if ! $hypo;
+	             $prod = $HYPO;
+	          }
+               }
+               last if $prod and $ec;  # we have some data now, exit out
+            }  
+         }
+  
+         $prod ||= $HYPO;
+
+         # skip hypthetical proteins, unless user has overridden this with --hypo
+         next if !$hypo and $prod eq $HYPO;
+ 
+         $ec ||= $blank;
+         $gene ||= $blank;
+         $prod ||= $blank;
+  
+         print STDERR join("\t", $entry->AC, $ec, $gene, $prod, $cog), "\n" if $verbose;
+         print {$sprot_fh} ">", $entry->AC, " $ec$sep$gene$sep$prod$sep$cog\n", $entry->SQs->seq, "\n";
+  
+         $out++;
+      }
+  }   
+  if (-s -e "$databasedir/prokka/uniprot_sprot.dat") {
+    runcmd("rm $databasedir/prokka/uniprot_sprot.dat");
+  }
+}
+
+sub build_cm {
+   if (-s -e $databasedir){
+      print YELLOW "Downloading CM\n", RESET;
+      unless (-s -e "$databasedir/cm/Rfam.cm.gz" or -s -e "$databasedir/cm/Rfam.cm"){
+         runcmd("wget -P $databasedir/cm https://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz");
+      }
+      else {print RED "Skipping download\n" , RESET};
+      if (-s -e "$databasedir/cm/Rfam.cm.gz"){
+         print YELLOW "Extracting CM\n", RESET;
+         runcmd("gunzip $databasedir/cm/Rfam.cm.gz");
+      }
+   }
+   else { 
+      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   } 
+ #  chdir "$databasedir/cm";
+   foreach my $tax (@tax) {
+      unless (-s -e "$databasedir/cm/$tax"){
+#        runcmd("mysql --user rfamro --host mysql-rfam-public.ebi.ac.uk --port 4497 --database Rfam  < $databasedir/aux/$tax.sql | tail -n +2 > $databasedir/aux/Rfam_$tax.txt");
+         runcmd("cmfetch -o $databasedir/aux/Rfam_$tax.cm -f $databasedir/cm/Rfam.cm $databasedir/aux/Rfam_$tax.txt");
+         runcmd("cmconvert -o $databasedir/cm/$tax -b $databasedir/aux/Rfam_$tax.cm");
+      }
+   }
+}
+
+sub build_ribo {
+   if (-s -e $databasedir){
+       print YELLOW "Downloading ribosomal\n", RESET;
+      unless (-s -e "$databasedir/ribo/16S_ribosomal_RNA.tar.gz" or -s -e "$databasedir/ribo/16S_ribosomal_RNA.nin"){ 
+         runcmd("wget -P $databasedir/ribo https://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz");
+      }
+      else {print RED "Skipping download\n", RESET};
+      unless (-s -e "$databasedir/ribo/LSU_prokaryote_rRNA.tar.gz" or -s -e "$databasedir/ribo/LSU_prokaryote_rRNA.nin"){
+         runcmd("wget -P $databasedir/ribo https://ftp.ncbi.nlm.nih.gov/blast/db/LSU_prokaryote_rRNA.tar.gz");
+      }
+      else {print RED "Skipping download\n", RESET};
+      chdir "$databasedir/ribo";
+      print YELLOW "Extracting Ribosomal\n", RESET;
+      if (-s -e "$databasedir/ribo/LSU_prokaryote_rRNA.tar.gz"){
+         runcmd("tar -xzf LSU_prokaryote_rRNA.tar.gz");
+      }
+      if (-s -e "$databasedir/ribo/16S_ribosomal_RNA.tar.gz"){
+         runcmd("tar -xzf 16S_ribosomal_RNA.tar.gz");
+      }
+   }
+   else { 
+      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   } 
+}
+sub build_checkm {
+   if (-s -e $databasedir){
+      unless (-s -e "$databasedir/checkm/hmms/checkm.hmm"){
+         print YELLOW "Downloading checkm\n", RESET;
+         unless (-s -e "$databasedir/checkm/checkm_data_2015_01_16.tar.gz"){
+            runcmd("wget -P $databasedir/checkm -N -nd -q https://data.ace.uq.edu.au/public/CheckM_databases/checkm_data_2015_01_16.tar.gz");
+         }
+         print YELLOW "Extracting Checkm\n", RESET;
+         runcmd("checkm data setRoot $databasedir/checkm");  
+         chdir "$databasedir/checkm/";
+         runcmd("tar -zxf checkm_data_2015_01_16.tar.gz");
+      }
+      else {
+        print RED "Skipping download\n", RESET
+      };
+   }
+}
+
+runcmd("rm  $databasedir/6365662  $databasedir/json $databasedir/files");
+#$databasedir/virus/vog.hmm.tar.gz $databasedir/virus/VOG $databasedir/ribo/LSU_prokaryote_rRNA.tar.gz  $databasedir/ribo/16S_ribosomal_RNA.tar.gz
+
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+   use Getopt::Long;
+
+   @Options = (
+    {OPT=>"help",		VAR=>\&usage,             			DESC=>"This help"},
+    {OPT=>"verbose!",		VAR=>\$verbose,		DEFAULT=>0, 		DESC=>"Verbose output"},
+    {OPT=>"separator=s",	VAR=>\$sep, 		DEFAULT=>'~~~', 	DESC=>"Separator for gene/EC/product"},
+    {OPT=>"blank=s",   		VAR=>\$blank, 		DEFAULT=>'', 		DESC=>"Replace empty gene/EC/product with this"},
+    {OPT=>"evidence=i",   	VAR=>\$evlev, 		DEFAULT=>2, 		DESC=>"1=prot 2=mrna 3=homol 4=pred 5=unsure"},
+    {OPT=>"fragments!",   	VAR=>\$frag, 		DEFAULT=>0, 		DESC=>"Include 'DE Flags: Fragment;' entries"},
+    {OPT=>"minlen=i",   	VAR=>\$minlen, 		DEFAULT=>20, 		DESC=>"Minimum peptide length"},
+    {OPT=>"maxlen=i",   	VAR=>\$maxlen, 		DEFAULT=>1E5, 		DESC=>"Maximum peptide length"},
+    {OPT=>"term=s",   		VAR=>\$term, 		DEFAULT=>'', 		DESC=>"Lineage must contain this term eg. 'Bacteria'"},
+    {OPT=>"hypo!",   		VAR=>\$hypo, 		DEFAULT=>0, 		DESC=>"Don't filter out hypothetical proteins"},
+    {OPT=>"dbloc=s",        	VAR=>\$databasedir,     DEFAULT=>'',     	DESC=>"Path to databases"},
+    
+    "\nDatabases:",
+    {OPT=>"metascan",           VAR=>\$metascan,        DEFAULT=>'',            DESC=>"Do not install metascan"},    
+    {OPT=>"all",                VAR=>\$all,             DEFAULT=>'',            DESC=>"Install All databases (protein,CM)"},  
+    {OPT=>"protein",            VAR=>\$protein,         DEFAULT=>'',            DESC=>"Install proteins (blast)"},  
+    {OPT=>"cm",                 VAR=>\$cm,              DEFAULT=>'',            DESC=>"Install CM (ncRNA)"},
+    {OPT=>"VOG",                VAR=>\$vog,             DEFAULT=>'',            DESC=>"Install VOG"},  
+    {OPT=>"ribo",               VAR=>\$ribo,            DEFAULT=>'',            DESC=>"Install Ribosomal genes"},
+    {OPT=>"checkm",             VAR=>\$checkm,          DEFAULT=>'',            DESC=>"Install Checkm"},          
+  );       
+
+  #(!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} grep { ref } @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (ref $_ && defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+    foreach (@Options) {
+       if (ref) {
+          my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+          $def = ($def ? ' (default OFF)' : '(default ON)') if $_->{OPT} =~ m/!$/;
+          my $opt = $_->{OPT};
+          $opt =~ s/!$//; 
+          $opt =~ s/=s$/ [X]/; 
+          $opt =~ s/=i$/ [N]/;
+          $opt =~ s/=f$/ [n.n]/;
+          printf STDERR "  --%-15s %s%s\n", $opt, $_->{DESC}, $def;
+       }
+       else {
+            print STDERR "$_\n";
+         }      
+      }
+      exit(1);
+}
+   
+   
+   
+sub runcmd {
+   system(@_)==0 or err("Could not run command:", @_);
+}
+sub err {
+  exit(2);
+}
+#----------------------------------------------------------------------
+
+sub json{
+    my $txt = do {                                # do block to read file into variable
+       local $/;                                  # slurp entire file
+       open my $fh, "<", $_[0] or die $!;         # open for reading
+       <$fh>;                                     # read and return file content
+    };
+    $_[1]= decode_json($txt);  # ($filename, $json);         
+}
+
+
+#sub compute_md5_checksum($){
+#    my $file = shift;
+#    my $digest = "N/A";
+#    if (open(DOWNLOADED_FILE, $file)) {
+#        binmode(DOWNLOADED_FILE);
+#        $digest = Digest::MD5->new->addfile(*DOWNLOADED_FILE)->hexdigest;
+#        close(DOWNLOADED_FILE);
+#    }
+#    return $digest;
+#}
+
+#sub read_md5_file($){
+#    my $md5file = shift;
+#    open(IN, $md5file);
+#    $_ = <IN>;
+#    close(IN);
+#    my @retval = split;
+#    return $retval[0];
+#}

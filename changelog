@@ -25,3 +25,13 @@ Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will
 * Adapted Metascan for the table2asn of that some NCBI
 
 * Added a template figure for constructing the cycles
+
+1.4 ( jan 24, 2024)
+
+* Created a conda environment
+
+* Added beta version for phage recognition
+
+* Added a script to download the databases
+
+* Added a few scripts to retrieve fastas from the data 

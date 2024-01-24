@@ -1,26 +1,10 @@
 # Metascan
 
+## Welkom to Metascan, a Metagenomic Scanning and Annotation tool with an emphasis on metabolic genes.
 
-> _**Databases and auxillary files can be found -> [here](https://www.microbiology.science.ru.nl/gcremers/)_ <- or ->[here](https://zenodo.org/record/6365663)<-**
+### **Metabolic scanning and annotation of Metagenomes**
 
-The default database for the 16S BLAST is now the 16S database of NCBI, since this one is a lot a faster than the nt Database. The nt database is still available as an option.
-
-The new database can be found at NCBI : https://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz
-
-> _**The file used for coverage should be parsed to the following format (Checkm Optional):_
-> 
-> `binname (tab) coverage (tab) checkm_lineage`
-> 
-> _Where binname is the name of the bin in the directory._**
-
-
-
-
-Due to Github issues on my part, the initial Github repository is now named metascan-old.
-
-**Metabolic scanning and annotation of Metagenomes**
-
-Metascan is an Metagenomic Scanning and Annotation tool, with an emphasis on metabolic genes.
+Metascan is a Metagenomic Scanning and Annotation tool, with an emphasis on metabolic genes.
 The heart of Metascan is a set of metabolic core genes, that are used to paint a picture of the metabolic capacity of the sample.
 Furthermore, it utilizes the Kegg pathways for a complete metabolic overview of each sample.
 
@@ -28,30 +12,75 @@ Samples can be analyzed as eiter binned or unbinned metagenome.
 
 Metascan consists of a perl script, a few auxillary (text-)files and a set of HMM profiles, created by clustering TrEmbl proteins, based on Kegg K-numbers.
 
-**INSTALLATION pointers:**
+### **INSTALLATION:**
 
-Since it is a Prokka adaptation, it should be able to run on any system that can already run Prokka, just by downloading the script and the databases. The only modification that needs to be done is to direct the script to the right location of the database. Metascan is however based on an already older version of Prokka, so some inconsistencies can pop up here and there. 
+Due to recent changes in tabel2asn, it is alot more difficult to use Metascan if Prokka can run in an environment or system.
+Therefor, Metascan now has its own Conda environment. I have also used this update to include a viral sequence algorithm which is VERY! beta (see below).
 
-The conda Prokka environment can also be used.
+To install Metascan, first clone Metascan to your system:
 
-However, when using the Prokka conda environment, there can be some issues. 
+```bash
+# Clone the git repository to your system;
+git clone https://github.com/gcremers/metascan.git
+# and cd into this directoy
+cd metascan/
+# Create an enironment and activate the envirnment
+conda env create -f metascan.yaml -n metascan
+conda activate metascan
 
-SignalP has to be requested before it can be downloaded from the website and can be found here: https://services.healthtech.dtu.dk/service.php?SignalP-5.0. It contains a bin file that can be put in PATH
+# NB, the creation throws a number of error messages on my system. They do not seem to harm the installation.
 
-The maximum version for hmmpress is 3.1b2 and can be found here:  http://eddylab.org/software/hmmer3/3.1b2/
-Higher versions are too strict to index the Metascan databases.
-Version hmmer-3.1b2-linux-intel-x86_64.tar.gz contains precompiled bin files.
+# Put metascan in the bin folder of the environment (change the second part accordingly). There is one extra script now for downloading the databases
+cp ./metascan /path/to/Anaconda/envs/metascan/bin/
+cp ./metascan_db_download /path/to/Anaconda/envs/metascan/bin/
+```
 
-Once the databases are indexed, the version doesn really matter anymore. That is why there is no maxiumum version set to this in the script.
+Metascan is now installed
 
-When the cmpress and BLASTP don't have the right path, the easiest way to fix this is to run: prokka --listdb
-This will show a  line like this:
+Now we have to build the databases
+In order to do so, a bit of hardcoding is necessary (for now). I hope to find a solution for this at some point.
 
-[09:44:41] Looking for databases in: /usr/local/bioinfo/prokka/db
+Open the file metascan (now /path/to/Anaconda/envs/metascan/bin/metascan) and in line 50, change /path/to/databases/
+`my $databasedir="/path/to/databases/metascan";`
+and create this directory
+`mkdir /path/to/databases/metascan`
+to the path and directory were you want the database located
 
-in lines 51, you should enter that location in the $prokkaloc placeholder.
+```bash
+# Still working from the github directory we created
 
-Krona is not needed to run Metascan right now, but it will leave you with some additional files if you don't.
+# Download the databases
+metascan . --download
+# Index the databases
+metascan . --setupdb
+# Check databses with 
+metascan . --listdb
+
+#if you want so save some space on your system and if you already have a checkm database, you (re)set the path with
+checkm data setRoot <DB_PATH>
+see checkm data -h
+```
+
+Metascan should now be ready to use.
+
+##### Some notes:
+
+
+The script to download databases can be used on its own, to install the databases seperately.
+
+Databases and auxillary files can also be found -> [here](https://www.microbiology.science.ru.nl/gcremers/)_ <- or ->[here](https://zenodo.org/record/6365663)<-
+
+**The file used for coverage should be parsed to the following format (Checkm Optional):
+
+`binname (tab) coverage (tab) checkm_lineage`
+ 
+Where binname is the name of the bin in the directory.**
+
+
+Although Metascan ahs to option to use mapping (BWA) and checkm, I'd generally advice against it, since nowadays, much more specialized tools and pipelines are available that will probably work much faster as well.
+
+Due to Github issues on my part, the initial Github repository is now named metascan-old.
+
 
 **So, what can it do?**
 
@@ -61,8 +90,14 @@ Krona is not needed to run Metascan right now, but it will leave you with some a
 - Besides analysing the sample as a whole, Metascan can also be used to completely annotate genomes (with an emphasis on metabolic processes).
 
 - Thirdly, Metascan can be used to retrieve specific genes from a metagenome. Users can also submit their own (not necessarily metabolic genes) for Metascan to search and retrieve in fasta format.
+There are two scripts added to that will allow you to retrieve fastas from the fasta files, based on either the header or patterns in the bases/amino-acids.
 
-- Fourth (coming up in metascan2) is the option to search for viral contigs/areas within the metagenome (although not yet fully validated).
+To iterate over multiple directories, go the base directory where your subdirs are and run: `for d in ./*/ ; do (cd "$d" && perl fastaextract_desc_id.pl *.hmm.faa arsenate ../ars); done`
+This will create a file called `ars.fasta`, which contains all genes that have arsenate in the header.
+
+For genes containing the motif CxxCH (cytochrome C) run (iteratively if desired) `perl fastaextract_desc_id.pl *.hmm.faa c..ch ../cytc`.
+
+- Fourth is the option to search for viral contigs/areas within the metagenome (although not yet fully validated).
 
 **How does Metascan work?**
 
@@ -95,32 +130,27 @@ When you are finished, add 1 line to the start of the HMM profile:
 
 In order for Metascan to be able to output the generated data into the overview files
 
-**Dependencies:**
+**Viral contigs algorithm:**
 
-Prokka:
-- parallel    MINVER  => "20130422"
-- prodigal    MINVER  => "2.6",     MAXVER  => "2.69"
-- hmmsearch   MINVER  => "3.1"
-- hmmpress    MINVER  => "3.1", #3.2 causes problems in building databases because of similar DESC fields
-- tbl2asn     MINVER  => "24.3"
-- rnammer     MINVER  => "1.2"
-- barrnap     MINVER  => "0.4"
-- blastn      MINVER  => "2.1", #This is actually 2.2, but since were at 2.10 now, the comp thinks were at 2.1 again
-- blastp      MINVER  => "2.1"
-- signalp     MINVER  => "3.0" max 5.0
-- aragorn     MINVER  => "1.2"
-- minced      MINVER  => "1.6"
-- cmscan      MINVER  => "1.1"
-- cmpress     MINVER  => "1.1"
+_How does it work?_
 
+Viral HMM profiles were downloaded from https://vogdb.org/ and can now be used as a separate subset in the analysis. During the analysis, Metascan marks all the proteins that have a hit with this database. After the analysis is done, Metascan then does a ‘rolling average’ for all the proteins/loci on the contigs over a certain window.
 
-Optional:
-- bwa         MINVER  => "0.7"
-- checkm      MINVER  => "1"
-- samtools    MINVER  => "1.1" #This is actually 1.6, but since were at 1.13 now
+Line **I**: Loci, Line **II**: hit yes(1) or no(0), Line **III**: rolling average over a window of 5. Theoretical DNA stretch, containing possible viral proteins 
 
+```bash
+|**I**  |A 	|B 	|C 	|D 	|E 	|F 	|G 	|H 	|I 	|J 	|K 	|L 	|M 	|N 	|O 	|P 	|Q 	|R 	|S 	|T 	|U 	|V 	|W     |
+|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:----:|
+|**II** |1 	|0 	|0 	|0 	|0 	|0 	|1 	|0 	|0 	|1 	|1 	|1 	|1 	|0 	|1 	|0 	|1 	|0 	|0 	|0 	|0 	|0 	|0     |
+|**III**|0.2 	|0.2 	|0.2 	|0 	|0.2 	|0.2 	|0.2 	|0.4 	|0.6 	|0.6 	|0.8 	|0.8 	|0.8 	|0.6 	|0.6 	|0.4 	|0.4 	|0.2 	|0.2 	|0 	|0 	|0 	|0     |
+```
 
-To be removed from Metascan:
-- makeblastdb MINVER  => "2.2"
-- metabat2    MINVER  => "2.12"
+This means that for each protein, the average is calculated over the amount of proteins of that window. So with a window of 5, the average is calculated over 2 proteins in front, the protein itself and 2 proteins thereafter. Missing numbers at the ends are counted as 0.
+So:
+for J, the calculation is (0+0+1+1+1)/5=0.6
+for L, the calculation is (1+1+1+1+0)/5=0.8
+for A, the calculation is (0+0+1+0+0)/5=0.2
 
+This results in a line of numbers with an average for each locus. From the sample above it is clear that with the area G to Q, there are a lot of viral genes and thus it is an area of interest. Metascan then collect the areas that have a continuous line of positive averages (E to S). When the line reaches 0, the area is ended.
+Metascan then outputs all the loci for all the stretches that are found, but only the stretches that reach a certain threshold are thoroughly reported, protein by protein and with the inclusion of fasta files. These stretches and fasta files can then be manually investigated to your own leisure.
+Because some viral genes are, as of yet, exclusively found in viruses, while others are also part bacterial genomes, the VOG database comes with an index value for each profile. This number indicates how exclusive the gene is for viruses (3 being only found in viruses, 0 not found in viruses). This number is also taken into account in the calculation used by Metascan. 
