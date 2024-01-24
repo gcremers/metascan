@@ -9,6 +9,7 @@ use Data::Dumper;
 use JSON;
 use Term::ANSIColor qw(:constants);
 
+
 my(@Options, $verbose, $frag, $evlev, $minlen, $maxlen, $sep, $blank, $term, $hypo, $databasedir, $all, $protein, $cm, $metascan, $vog, $ribo, $checkm);
 setOptions();
 
