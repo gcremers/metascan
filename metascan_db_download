@@ -124,19 +124,24 @@ sub build_VOG {
    else {print RED "Skipping download\n", RESET;}
    unless (-s -e "$databasedir/virus/vog.annotations.tsv.gz" or -s -e "$databasedir/virus/vog.annotations.tsv"){
       runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.annotations.tsv.gz");
-      runcmd("gunzip -f vog.virusonly.tsv.gz"); 
    }
    else {print RED "Skipping download\n", RESET;}
    unless (-s -e "$databasedir/virus/vog.virusonly.tsv.gz" or -s -e "$databasedir/virus/vog.virusonly.tsv"){
       runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.virusonly.tsv.gz");
-      runcmd("gunzip -f vog.annotations.tsv.gz");
    }
    else {print RED "Skipping download\n", RESET;}
+   
+   if (-s -e "vog.annotations.tsv.gz"){
+      runcmd("gunzip -f vog.annotations.tsv.gz");
+   }
+   if (-s -e "vog.virusonly.tsv.gz"){
+      runcmd("gunzip -f vog.virusonly.tsv.gz");
+   }
    
    print YELLOW "Building VOG\n", RESET;
    unless (-s -e "$databasedir/virus/VOG.hmm"){
       my %VOG;
-      open (KO, "<vog.annotations.tsv") or die "Can't open META.KO.txt";
+      open (KO, "<vog.annotations.tsv") or die "Can't open vog.annotations.tsv";
       while (my $line = <KO>){
          chomp $line;
          my ($vogn, $b, $c, $d, $desc) = split(/\t/, $line, 5);
