@@ -47,7 +47,7 @@ use File::Basename;
 
 
 # Change these two URL to the location where your databases are stored: The auxillary files also go into the databasedir.
-my $databasedir="/vol/micro-databases/metascan-tmp";
+my $databasedir="/path/to/databases/metascan";
 
 #my $databasedir_blastnt="$databasedir/ribo/nt";
 my $databasedir_blastn="$databasedir/ribo/16S_ribosomal_RNA";
