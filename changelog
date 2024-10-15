@@ -26,7 +26,7 @@ Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will
 
 * Added a template figure for constructing the cycles
 
-1.4 ( jan 24, 2024)
+1.4 (Jan 24, 2024)
 
 * Created a conda environment
 
@@ -35,3 +35,16 @@ Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will
 * Added a script to download the databases
 
 * Added a few scripts to retrieve fastas from the data 
+
+1.5 (Oct 15 2024)
+
+* Added annotation for precalled Amino-Acid CDS'
+
+* Added tmpdir option
+
+* Changed the the outdir is handled
+
+* Help function is easier to access
+
+* added --shortid option to reduce headers in fastas 
+

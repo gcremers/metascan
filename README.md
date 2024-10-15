@@ -69,8 +69,10 @@ see checkm data -h
 
 Metascan should now be ready to use.
 
-##### Some notes:
+### Updating metascan
+If metascan is installed properly, updating it is as easy as replacing the metascan perl script with the new one. You could even keep the old script and change the symlink or call upon the new script directly.
 
+##### Some notes:
 
 * The script to download databases can be used on its own, to install the databases seperately.
 
@@ -88,7 +90,6 @@ Where binname is the name of the bin in the directory.
 
 
 ## **So, what can it do?**
-
 
 - First and foremost, Metascan is intended to get an overview of the metabolic process within a given sample (metagenome). This could be an unbinned core assembly, but it can also be a binned metagenome. In which case you should not forget to include the unbinned leftover contigs as a bin in your analysis as these are still part of the metagenome.
 
@@ -134,6 +135,202 @@ When you are finished, add 1 line to the start of the HMM profile:
 `#CYCLE (tab) name`
 
 In order for Metascan to be able to output the generated data into the overview files
+
+## **Examples:**
+
+__The three most basic ways to use metascan are (from fast to slow):__
+
+`metascan <dir> --nokegg`
+
+This will run a purely key-gene based analysis.
+
+`metascan <dir>`
+
+Will run a full metabolic analysis, using the complete metabolic KEGG data. 
+
+`metascan <dir> --prokka`
+
+Will run a complete annotation of the (meta)genome(s).
+
+__More specific options are:__
+
+`metascan <dir> --nokegg --depth file-containing-mag-and-coverage.txt`
+
+Will incorporate the depth (coverage) information for each genome on a keygene based analysis.
+
+`metascan <dir> -bothhmms somefile.hmm`
+
+Will run both the the full metabolic analysis, as well as a user supplied HMM database.
+
+`metascan <dir> -hmms somefile.hmm`
+
+Will only run the user supplied HMM database.
+
+`metascan <dir> --nokegg --phages`
+
+Will run a keygene analysis, together with a phage analysis (if the DB is installed).
+
+`metascan <dir> --phages-only`
+
+Will run an analysis, with only the phages database (if installed).
+
+`metascan <dir> --prokka --compliant --centre name`
+
+Will force Metascan in using a NCBI compliant format. Most useful when contig names are too long.
+
+`metascan file.faa --aaonly`
+
+Run Metascan on previously gene called (and/or annotated) proteins.
+
+### Metascan help
+
+Usage:
+
+`metascan <dir> [options]`
+
+```
+General:
+  --help             This help
+  --version          Print version and exit
+  --citation         Print citation for referencing Prokka
+  --quiet            No screen output (default OFF)
+  --debug            Debug mode: keep all temporary files (default OFF)
+  --restore          Restore data and restart from breaking point (default OFF)
+  --tmpdir [X]       Set temporary directory for analysis (default '/scratch')
+  --shortid          Shorten contig ID's if they are too long (default OFF) 
+Setup:
+  --listdb           List all configured databases
+  --download         Download databases
+  --setupdb          Index all installed databases. Manually please until thoroughly checked
+  --cleandb          Remove all database indices
+  --depends          List all software dependencies```
+Outputs:
+  --force            Force overwriting existing output folder (default OFF)
+  --prefix [X]       Filename output prefix [auto] Not to be used with multi bin analysis (default '')
+  --locustag [X]     Locus tag prefix [auto] (default '')
+  --increment [N]    Locus tag counter increment (default '1')
+  --gffver [N]       GFF version (default '3')
+  --addgenes         Add 'gene' feature to each 'CDS'  (default OFF)
+  --compliant        Force Genbank/ENA/DDJB compliance: --addgenes --mincontiglen 200 --centre XXX (default OFF)
+  --centre [X]       Sequencing centre ID. This option NEEDS command line input! (default '')
+  --nozero           Do not list negative hits in output (default OFF)
+  --nosort           Do not sort contigs to length
+  --outdir [X]       Output folder [auto] (default 'metascan_out')
+Proteins Annotation Only:
+  --aaonly           Run an FAA file, without metagenome analysis; Provide .faa file (default '')  
+Annotations:
+  --kingdom [X]      rRNA mode: Bacteria Archaea (default 'Bacteria')
+  --gcode [N]        Genetic code / Translation table (set if --kingdom is set) (default '11')
+  --rawproduct       Do not clean up /product annotation (default OFF)
+  --norrna           Don't run rRNA search (default OFF)
+Computation:
+  --cpus [N]         Number of CPUs to use [0=all] (default '8')
+  --mincontiglen [N] Minimum contig size [NCBI needs 200] (default '1')
+  --evalue [n.n]     Similarity e-value cut-off for RNA and small proteins (default '1e-06')
+  --e-kegg [n.n]     E-value cut-off for big proteins with the use of the Kegg database (default '1e-50')
+  --e-nokegg [n.n]   E-value cut-off for big proteins for key genes only (default '1e-100')
+  --e-partial [n.n]  E-value cut-off for partials genes (default '1e-80')
+  --size [n.n]       Size range Query-Target length; 20 => 80-120% (default '20')
+  --size-part [n.n]  Size range Query-Target length for partial genes; 30 => 70-130% (default '30')
+  --smalltrgt [n.n]  Max value for a target sequence to be considered a small protein. Lower is more stringent (default '200')
+  --windowsize [N]   Windowsize for Phage 'operon' computation, Odd numbers only (defualt '5')
+  --phagethresh [N]  Minimum total sum of averages for reporting phage stretches (default '1')
+Additional Options:
+  --depth [X]        Include Depth of Genes. Use the Binmate TSV overview file (default '')
+  --checkm           CheckM for Bin Quality Control and Identification (default OFF)
+  --mapping [X]      Map reads to genes. Requires dir name containing FASTQ file(s) (default '')  
+Database Options:
+  --phages           Add phages for Annotation and analysis (default OFF)
+  --phages-only      Use only phages for Annotation and analysis (default '')
+  --hmms [X]         User supplied HMM to annotate from (default '')
+  --bothhmms [X]     Both User supplied and metabolic HMM to annotate from (default '')
+  --nokegg           Don't run Kegg database for KEGG (default OFF)
+Prokka Annotation Options:
+  --prokka           Use all prokka options (default OFF)
+  --trna             Search for tRNA and tmRNA (default OFF)
+  --ncrna            Search for ncRNA (default OFF)
+  --crispr           Search for CRISPRs (default OFF)
+```
+
+### Metascan output
+Metascan produces the following files:
+
+For the total analysis, a few files are created
+
+- **bin.id** : list of the bins and their directory name, as created by metascan
+- **depths.bins** : file with the depth of each bin (if applicable)
+- **krona.html** : krona file containing the information of the total analysis (see total.ovw)
+- **metagenome.tsv** : all metabolic annotated proteins in tab format
+- **mod.tsv** : overview of the modules (similar to the Kegg modules https://www.genome.jp/kegg/module.html)
+- **proc.tsv** : overview of the processes (similar to the Kegg processes)
+- **phage.tsv** : overview file for phage proteins (if applicable)
+- **prodigal.txt** : data file containing raw prodigal information. 
+- **ribosomal.ovw** : overview file of the ribosomal RNAs per bin
+- **total.tsv** : total overview of the analysis in tab format(see total.ovw) -contains all metabolic genes, if applicable)
+- **total.ovw** : overview file of the analysis of the key genes
+ 
+ Each metabolic cycle is represented by a set of key-genes.
+ - **N#gene** : number of times the key-gene was found in the total analysis
+ - **%gene** : % of the key-gene compared to the total key-genes found
+ - **N#org** : total number of organism (bins) the key-genes are found in.
+ - **%Org** : % of the organism that have this key-gene, compared to the total organism found
+  
+ (If a depth(coverage) file is supplied:
+ - **O-Depth** : total depth of all the organism that have this key-gene.
+ - **%O-Depth** : % of the depth of all organism with the key-gene, compared to the total depth of all bins
+ - **G-Depth** : total depth of all the key-genes in the set (thus adjusted for multi-copies of key-genes in a genome)
+ - **%G-Depth** : % of the depth of all key-genes in the set compared to the total depth of all key-genes
+  
+  So if we have two genes (a and b) and three bins (I, II, III), with the following depth:
+   
+   |I _abb_   | II _aa_  |III _b_|
+   |:-----:|:-----:|:-----:|    
+   |x       |   x    |  x  |    
+  | x |         x  |    x  |    
+  | x  |        x   |       |  
+  | x|||
+  | x|||
+  | x|||
+  
+Total gene count = 6 (3(abb) + 2(aa) +1(b))<p>
+Total organism count = 3 (1(I)+1(II)+1(III))<p>
+Total depth = 11 (6+3+2)<p>
+Total gene depth = 26 ( (3x6) + (2x3) + (1x2))<p>
+  
+This would yield the following outcome:
+ 
+ |**gene**|N#gene|%gene|N#org|%Org|O-Depth|%O-Depth|G-Depth|%G-Depth|
+ |:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
+ |**a**|3 (1+2+0)|50% (3/6)|2 (1+1+0) |66% (2/3) |9 (6+3+0) |81.2% (9/11)|12 (6+(3+3)+0) |46.2 (12/26)|
+ |**b**|3 (2+0+1)|50% (3/6)|2 (1+0+1)|66% (2/3)|8 (6+0+2)|72.7% (8/11)|14 ((6+6)+0+2)|53.9 (14/26)|
+ 
+Besides the generic overview files, Metascan creates a number of files for each bin/(meta)genome/fasta file.
+
+- **XXXXXXXX.ovw** : overview file of the keygenes in the bin.
+- **XXXXXXXX.tsv** : overview file in tab format.
+- **XXXXXXXX.gbk** : NCBI genbank file.
+- **XXXXXXXX.gff** : gff file
+- **XXXXXXXX.fna** : fna file
+- **XXXXXXXX.fsa** : fsa file
+- **XXXXXXXX.sqn** : sequin file
+- **XXXXXXXX.embl** : ENA embl file
+- **XXXXXXXX.log** : log file
+- **XXXXXXXX.f16** : fasta file containing rRNA sequences
+- **XXXXXXXX.tabel** : feature table
+- **XXXXXXXX.txt** : general info on the annotation
+- **XXXXXXXX.kegg** : File that can be used to reconstruct pathwyas in KEGG (https://www.genome.jp/kegg/mapper/reconstruct.html)
+- **XXXXXXXX.fall** : all genes in bases (CDS and rRNA)
+- **XXXXXXXX.hmm.faa** : Genes found through the HMM algorithm. I.e. the metabolic genes (Amino Acids)
+- **XXXXXXXX.hmm.ffn** : Genes found through the HMM algorithm. I.e. the metabolic genes (Nucleic Acids)
+- **XXXXXXXX.all.faa** : All annotated genes (both through HMM (metabolic) and the legacy Prokka annotation (non metabolic)) (Amino Acids) 
+- **XXXXXXXX.all.ffn** : All annotated genes (both through HMM (metabolic) and the legacy Prokka annotation (non metabolic)) (Nucleic Acids)
+
+- **XXXXXXXX.total.sort.tbl** : (sorted, by score) intermediate file of the hits found by Metascan for each CDS
+- **XXXXXXXX.total.uniq.tbl** : intermediate file containing the top hit for each CDS
+- **XXXXXXXX.aaonly.tsv** : Overview file when using pre gene-called ORFs instead of a nucleic fasta file
+ 
+- **hydrogenases/** : contains the fasta (nucleic and amino-acids) of the hydrogenases
+- **phages/** :contains the fasta (nucleic and amino-acids) of the viral genes found (if applicable)
 
 ## **Viral contigs algorithm:**
 

@@ -46,20 +46,20 @@ use File::Path qw(remove_tree);
 use File::Basename;
 
 
-# Change these two URL to the location where your databases are stored: The auxillary files also go into the databasedir.
+# Change this URL to the location where your databases are stored: The auxillary files also go into the databasedir.
 my $databasedir="/path/to/databases/metascan";
 
 #my $databasedir_blastnt="$databasedir/ribo/nt";
 my $databasedir_blastn="$databasedir/ribo/16S_ribosomal_RNA";
-my $KEGG_hmm="$databasedir/meta.nonkey";
-my $phages_hmm="$databasedir/virus/VOG.hmm";
+#my $KEGG_hmm="$databasedir/meta.nonkey";
+#my $phages_hmm="$databasedir/virus/\w*\.hmm";
 my $virquotient_fh = "$databasedir/virus/vog.virusonly.tsv";
+my $KO_virus= "$databasedir/virus/vog.annotations.tsv";
 my $KO_file="$databasedir/aux/ko00000.keg";
 my $KO_hydro="$databasedir/aux/hydro.desc";
 # K22896 K22897	K22898	K22899 are added to nitfix. Seperated from K02588
 my $module_file="$databasedir/aux/mod.cyc.ko.txt";
 my $process_file="$databasedir/aux/proc.ko.txt";
-#my $process_file="$databasedir/proc.named.ko.txt";
 
 # When using a custom HMM profile, add: <code> #CYCLE <tab> cycle_name </code> to the first line of the hmm profile in  order to give it a cycle name    
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -78,10 +78,10 @@ my @CMDLINE = ($0, @ARGV);
 my $OPSYS = $^O;
 my $BINDIR = "$FindBin::RealBin/../binaries/$OPSYS";
 my $EXE = $FindBin::RealScript;
-my $VERSION = "1.0-beta";
+my $VERSION = "1.2-beta";
 my $AUTHOR = 'G. Cremers';
 my $URL = 'github.com/gcremers/metascan';
-my $METASCAN_PMID = 'nan';
+my $METASCAN_PMID = '36304333';
 my $METASCAN_DOI = 'https://doi.org/10.3389/fbinf.2022.861505';
 #my $DBDIR = "$FindBin::RealBin/../db";
 my $HYPO = 'hypothetical protein';
@@ -89,28 +89,90 @@ my $UNANN = 'unannotated protein';
 my $MAXCONTIGIDLEN = 37;  # Genbank rule
 my $SIGNALP_MAXSEQ = 10_000;  # maximum allowed input for signalp
 my @LOG; # buffer up log lines before we have log file ready
-my $dir = shift @ARGV // 'An empty entry';
-
+#my $dir=getcwd;
+#my $cdir=getcwd;
+my $fastadir;
 my %seq;
 my @seq;
 my @database;
-my $workdir = getcwd();
 
-my $PARALLELCMD = "parallel --pipepart --recend '//' --gnu --plain";
-my $PARALLELCMD2= "parallel --gnu --plain";
 my $starttime = localtime;
-#my $rnammer_mode = 'bac';
 my $barrnap_mode = 'bac';
-
-
-
-(-d $dir) or err("$dir is not a valid a directory. Please supply a directory containing (a)FASTA(s) on the command line");
 
 # command line options 
 
-my(@Options, $quiet, $debug, $kingdom, $force,$outdir, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $nolengthsort, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore, $phages, $phagesonly, $windowsize, $minsum, $nt,); #$stringent $rnammer $databasedir
+my(@Options, $quiet, $debug, $kingdom, $force, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $nolengthsort, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore, $phages, $phagesonly, $windowsize, $minsum, $tmpdir, $aaonly, $shortid, $dir); #$stringent $outdir,
 
 setOptions();
+
+if (@ARGV == 0) {usage();}
+
+#commandline check
+
+if ($centre =~ m/\-\-\w+/i){
+   err("Please rename your command line '--centre --xxxx' to '--centre ANYTHING --xxxx'");
+}
+if ($tmpdir =~ m/\-\-\w+/i){
+   err("Please rename your command line '--tmpdir --xxxx' to '--tmpdir ANYTHING --xxxx'");
+}
+if ($prefix =~ m/\-\-\w+/i){
+   err("Please rename your command line '--prefix --xxxx' to '--prefix ANYTHING --xxxx'");
+}
+if ($locustag =~ m/\-\-\w+/i){
+   err("Please rename your command line '--locustag --xxxx' to '--locustag ANYTHING --xxxx'");
+}
+if ($hmms =~ m/\-\-\w+/i){
+   err("Please rename your command line '--hmms --xxxx' to '--hmms ANYTHING --xxxx'");
+}
+if ($bothhmms =~ m/\-\-\w+/i){
+   err("Please rename your command line '--bothhmms --xxxx' to '--bothhmms ANYTHING --xxxx'");
+}
+if ($dir =~ m/\-\-\w+/i){
+   err("Please rename your command line '--outdir --xxxx' to '--outdir ANYTHING --xxxx'");
+}
+if ($kingdom =~ m/\-\-\w+/i){
+   err("Please rename your command line '--kingdom --xxxx' to '--kingdom ANYTHING --xxxx'");
+}
+if ($depth =~ m/\-\-\w+/i){
+   err("Please rename yor command line '--depth --xxxx' to '--depth ANYTHING --xxxx'");
+}
+if ($aaonly) { 
+   $dir="$dir".'_aa';
+}
+
+unless ($restore){
+   if (-d "$dir/") {
+      unless ($force) {
+         err("Folder '$dir' already exists! Please change --outdir or use --force");
+      }
+      if ($force) { 
+         msg("Re-using existing --outdir $dir/")
+      }
+      else {
+         if ($aaonly) { 
+            err("Folder '$dir' already exists! Please change --outdir or use --force");
+         }
+         else {
+            err("Folder '$dir' already exists! Please use --force. ! Using outdir will override previous results ! ");
+         }
+      }
+   }
+   else {    
+      msg("Creating new output folder: $dir/");
+      runcmd("mkdir -p \Q$dir\E");
+   }
+}
+
+if ($aaonly){
+   msg("using file $aaonly instead of directory");  
+}
+else {
+   $fastadir = shift @ARGV // 'An empty entry';
+   (-d $fastadir) or err("$fastadir is not a valid a directory. Please supply a directory containing (a)FASTA(s) on the command line");
+}
+
+my $PARALLELCMD = "parallel --pipepart --recend '//' --tmpdir $tmpdir --gnu --plain";
+my $PARALLELCMD2= "parallel --gnu --plain --tmpdir $tmpdir";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # table of tools we need/optional and min versions
@@ -142,18 +204,12 @@ my %tools = (
 #     MAXVER  => "3.1",
      NEEDED  => 1,
    },
-  'table2asn' => {
+   'table2asn' => {
     GETVER  => "table2asn -version",
     REGEXP  => qr/table2asn:\s+($BIDEC)/,
     MINVER  => "1.27",
     NEEDED  => 1,
    },
-#   'rnammer' => {
-#     GETVER  => "rnammer -V 2>&1 | grep -i 'rnammer [0-9]'",
-#     REGEXP  => qr/($BIDEC)/,
-#     MINVER  => "1.2",
-#     NEEDED  => 0,
-#   },
    'barrnap' => {
      GETVER  => "barrnap --version 2>&1",
      REGEXP  => qr/($BIDEC)/,  
@@ -178,18 +234,12 @@ my %tools = (
      MINVER  => "1",
      NEEDED  => 0,
    },
-  'makeblastdb' => {
+   'makeblastdb' => {
     GETVER  => "makeblastdb -version",
     REGEXP  => qr/makeblastdb:\s+($BIDEC)/,
     MINVER  => "2.2",
     NEEDED  => 0,  # only if --proteins used
-  },
-#   'prokka' => {
-#     GETVER  => "prokka --version 2>&1",
-#     REGEXP  => qr/prokka_edit_jf\s+($BIDEC)/, # !! our lab-specific !!
-#     MINVER  => "1.0",
-#     NEEDED  => 0,
-#   },
+   },
    'samtools' => {
      GETVER  => "samtools 2>&1 | grep 'Version'",
      REGEXP  => qr/Version:\s+($BIDEC)/,
@@ -250,16 +300,12 @@ my %tools = (
 if ($norrna){
    $tools{'barrnap'}{'NEEDED'}=0;
 }
-#if ($rnammer){
-#   $tools{'rnammer'}{'NEEDED'}=1;
-#}
 if ($prokka){
    $tools{'blastp'}{'NEEDED'}=1;
    $tools{'aragorn'}{'NEEDED'}=1;
    $tools{'minced'}{'NEEDED'}=1;
    $tools{'cmscan'}{'NEEDED'}=1;   
    $tools{'cmpress'}{'NEEDED'}=1;
-#   $tools{'prokka'}{'NEEDED'}=1;
 }
 if ($mapping){
    $tools{'samtools'}{'NEEDED'}=1;   
@@ -324,21 +370,6 @@ open my $bins_fh, '>', "$dir/depths.bins";
 
 print "Preparing setup data from files\n";
 
-my %VirQuot;
-if ($phages or $phagesonly){
-print "Viral Quotient\n";
-   open (VQ, "<$virquotient_fh") or die "Can't open $virquotient_fh";
-   while (my $line = <VQ>){
-      chomp $line; 
-      if ($line =~ /^V/) {
-         my ($VOG, $high, $med, $low) = split(/\t/, $line, 4);
-         my $VQ= $high + $med + $low + 0.0000000000000000000000001;
-         $VirQuot{$VOG}=$VQ;
-      }
-   }
-   close (VQ);
-}
-
 print "Kegg files\n";
 my %keg;
 open (KO, "<$KO_file") or die "Can't open $KO_file";
@@ -359,9 +390,82 @@ while (my $line = <KO>){
    $keg{$ko}=$desc;
 }
 
+my %VirQuot;
+if ($phages or $phagesonly){
+   print "Viral files\n";
+   open (KO, "<$KO_virus") or die "Can't open $KO_virus";
+   while (my $line = <KO>){
+      chomp $line;
+      my ($ko, $b, $c, $d, $desc) = split(/\t+/, $line, 5);
+      $keg{$ko}=$desc;
+   }   
+   close (KO);   
+   print "Viral Quotient\n";
+   open (VQ, "<$virquotient_fh") or die "Can't open $virquotient_fh";
+   while (my $line = <VQ>){
+      chomp $line; 
+      if ($line =~ /^V/) {
+     #    my $VQ=0;
+         my ($VOG, $high, $med, $low) = split(/\t/, $line, 4);
+         my $VQ= $high + $med + $low;
+    #     my $VQ= $high + $med + $low + 0.0000000000000000000000001;
+         $VirQuot{$VOG}=$VQ;
+      }
+   }
+   close (VQ);
+}
+
+if ($bothhmms){
+   print "Custom files: $bothhmms\n";
+   open (KO, "<$bothhmms") or die "Can't open $bothhmms";
+   print "Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
+   my @ko; my @desc;
+   while (my $line = <KO>){   
+      chomp $line;
+      if ($line =~ /^ACC/) {
+         my ($dud, $ko) = split(/KO\:/, $line, 2);         
+         push @ko, $ko;
+      }
+      if ($line =~ /^DESC/) {
+         my ($DESC, $desc) = split(/\s+/, $line, 2);
+         push @desc, $desc;
+      }
+   }
+   @keg{@ko}=@desc;
+}
+
+if ($hmms){
+   print "Custom files: $hmms\n";
+   open (KO, "<$hmms") or die "Can't open $hmms";
+   print "Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
+   my @ko; my @desc;
+   while (my $line = <KO>){   
+      chomp $line;
+      if ($line =~ /^ACC/) {
+         my ($dud, $ko) = split(/KO\:/, $line, 2);         
+         push @ko, $ko;
+      }
+      if ($line =~ /^DESC/) {
+         my ($DESC, $desc) = split(/\s+/, $line, 2);
+         push @desc, $desc;
+      }
+   }
+   @keg{@ko}=@desc;
+}
+
 opendir (DB, $databasedir) or die "Could not open '$databasedir' for reading '$!'\n";
 my @hmmdatabases = grep /\.hmm$/i && -f, map "$databasedir/$_", readdir (DB);
 closedir (DB);
+
+opendir (DV, "$databasedir/virus") or die "Could not open '$databasedir/virus' for reading '$!'\n";
+my @phage = grep /\.hmm$/i && -f, map "$databasedir/virus/$_", readdir (DV);
+my $phages_hmm = $phage[0];
+closedir (DV);
+
+opendir (DM, "$databasedir") or die "Could not open '$databasedir' for reading '$!'\n";
+my @nonkey = grep /\.nonkey$/i && -f, map "$databasedir/$_", readdir (DM);
+my $KEGG_hmm = $nonkey[0];
+closedir (DM);
 
 
 if ($bothhmms){
@@ -380,12 +484,12 @@ if ($phagesonly){
       push @hmmdatabases, $hmms;
    }
 }
+print "Preparing databases\n";
 
 my @combined_cycles;
 my %cycles_krona;
 my %combined_cycles;
 my %datastructure;
-
 foreach (@hmmdatabases){
    my $datab = fileparse("$_",  ".hmm");
    my %HoA_ACCKO;
@@ -457,12 +561,21 @@ my %contig_id; #phage
 my %id_contig; #phage
 my $checkm_phyl;
 my %big_hash;
-my $total_gsum = 0; my $total_osum = 0; my $total_odsum = 0; my $total_gdsum = 0;my $total_keggsum = 0;
+my $total_gsum = 0; my $total_osum = 0; my $total_odsum = 0; my $total_gdsum = 0; my $total_keggsum = 0; my $total_virussum = 0;
 
 open my $tot_ribo_ovw_fh , '>>', "$dir/ribosomal.ovw" or die $!; 
 
-opendir (DH, $dir) or die "Could not open '$dir' for reading '$!'\n";
-my @fastas = grep {$_ =~ /\.fasta$/ or $_ =~/\.fna$/ or  $_ =~/\.fa$/} readdir (DH);
+my @fastas;
+unless ($aaonly){
+   opendir (DH, $fastadir) or die "Could not open '$fastadir' for reading '$!'\n";
+   @fastas = grep {$_ =~ /\.fasta$/ or $_ =~/\.fna$/ or  $_ =~/\.fa$/} readdir (DH);
+   closedir (DH);
+}
+else {
+  # push @fastas, $aaonly;
+   push @fastas, $ARGV[0];
+}
+
 msg("Metascan found", scalar(@fastas), "fasta files to analyse");
 msg(".*..**...****************METASCAN***************...**..*.");
 if (! @fastas) {
@@ -484,11 +597,11 @@ if ($restore) {
    @fastas = @fastas2;
 
    #restore data
-   %big_hash = %{retrieve("file_hash.txt")};
-   %locus01 = %{retrieve("file_locus01.txt")};
-   %locusVQ = %{retrieve("file_locusVQ.txt")};
-   %contig_id = %{retrieve("file_contid.txt")};
-   %id_contig = %{retrieve("file_idcont.txt")};
+   %big_hash = %{retrieve("$dir/file_hash.txt")};
+   %locus01 = %{retrieve("$dir/file_locus01.txt")};
+   %locusVQ = %{retrieve("$dir/file_locusVQ.txt")};
+   %contig_id = %{retrieve("$dir/file_contid.txt")};
+   %id_contig = %{retrieve("$dir/file_idcont.txt")};
 
    $total_osum = scalar(@analyzedfastas);
 
@@ -516,9 +629,9 @@ open my $fastanal_fh , '>>', "$dir/analyzedfastas.txt" or die $!;
 my $current_bin;
 
 my @longnamedids;
-if (!$centre){
+unless ($aaonly or $shortid or $centre){
    foreach my $bin (@fastas) {
-      my $in = "$dir/$bin"; 
+      my $in = "$fastadir/$bin"; 
       my $fin = Bio::SeqIO->new(-file=>$in, -format=>'fasta');
       my @ids;
       while (my $seq = $fin->next_seq) {
@@ -537,12 +650,7 @@ if (!$centre){
    }
    if (@longnamedids){
       my @uniqlongnamedids = uniq(@longnamedids);
-      err("Please rename your contigs OR try '--centre X --compliant' to generate clean contig names for fasta file:", join(', ', @uniqlongnamedids));
-   }
-}
-if ($centre){#!if on the command line nothing is entered for $centre, the next option will be ignored  --compliant is the one most put in after $centre.Hopi
-   if ($centre eq '--compliant'){
-      err("Please rename yor command line '--centre --compliant' to '--centre ANYTHING --compliant', otherwise compliant will not run");
+      err("Please rename your contigs OR try '--centre X' or '--shortid' to generate clean contig names for fasta file:", join(', ', @uniqlongnamedids));
    }
 }
 
@@ -563,142 +671,218 @@ foreach my $bin (@fastas) {
    msg("Cut-off value for a protein to be considered small: $smalltrgt ");
    msg("Size range Query-Target length: $sizeperc %");
    msg("Size range Query-Target length partials: $sizepercpart %");
-   msg("Working directory: $workdir");
+   msg("Working directory: $dir");
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # check options
-
-if ($compliant) {
-   msg("Enabling options to ensure Genbank/ENA/DDJB submission compliance.");
-   $centre ||= 'Metascan';
-   $mincontiglen = 200;
-}
-
-   my $in = "$dir/$bin"; 
-   $current_bin= $bin;
-
+   
+   if ($compliant) {
+      msg("Enabling options to ensure Genbank/ENA/DDJB submission compliance.");
+      $centre ||= 'Metascan';
+      $mincontiglen = 200;
+      $addgenes = 1;
+   }
+   my $in;
+   unless ($aaonly){
+      $in = "$fastadir/$bin"; 
+      $current_bin= $bin;
+   }
+   else {
+      $in = "$bin";
+      $current_bin= $bin;
+   }
    # generate locustag
    $locustag ||= generate_locus_tag($in);
    # http://www.ncbi.nlm.nih.gov/genomes/static/Annotation_pipeline_README.txt
    $prefix ||= $locustag; # NCBI wants US format, ech.
-   $outdir ||= $prefix;
+   my $outdir2 ||= $prefix;
 
    #create a reference file to trace back the bin to the folder/locus name
    open my $bin_id_fh , '>>', "$dir/bin.id";
    print {$bin_id_fh} "$locustag\t$in\n";
    close $bin_id_fh;
 
-   if (-d "$dir/$outdir") {
+   if (-d "$dir/$outdir2") {
+      unless ($force) { 
+         err("Folder '$outdir2' already exists! Please change --outdir or use --force");
+      }
       if ($force) { 
-         msg("Re-using existing --outdir $dir/$outdir")
+         msg("Re-using existing --outdir $dir/$outdir2")
       }
       else {
-         err("Folder '$outdir' already exists! Please change --outdir or use --force");
+         if ($aaonly) { 
+            err("Folder '$outdir2' already exists! Please change --outdir or use --force");
+         }
+         else {
+            err("Folder '$outdir2' already exists! Please use --force. ! Using outdir will override previous results ! ");
+         }
       }
    }
    else {    
-      msg("Creating new output folder: $dir/$outdir");
-      runcmd("mkdir -p \Q$dir/$outdir\E");
+      msg("Creating new output folder: $dir/$outdir2");
+      runcmd("mkdir -p \Q$dir/$outdir2\E");
    }
    my @folders=("hydrogenases","phages");
    for (@folders) {
-      if (-d "$dir/$outdir/$_") {
+      if (-d "$dir/$outdir2/$_") {
          if ($force) { 
-            msg("Re-using existing --outdir $dir/$outdir/$_")
+            msg("Re-using existing --outdir $dir/$outdir2/$_")
          }
          else {
-            err("Folder '$outdir/$_' already exists! Please change --outdir or use --force");
+            err("Folder '$outdir2/$_' already exists! Please change --outdir or use --force");
          }
       }
       else {    
-         msg("Creating new output folder: $dir/$outdir/$_");
-         runcmd("mkdir -p \Q$dir/$outdir/$_\E");
+         msg("Creating new output folder: $dir/$outdir2/$_");
+         runcmd("mkdir -p \Q$dir/$outdir2/$_\E");
       }
    }
    msg("Using filename prefix: $prefix.XXX");
-   my $logfile = "$dir/$outdir/$prefix.log";
+   my $logfile = "$dir/$outdir2/$prefix.log";
    msg("Writing log to: $logfile");
    open LOG, '>', $logfile or err("Can't open logfile");
 
    msg("Loading and checking input file: $in");
-   my $fin = Bio::SeqIO->new(-file=>$in, -format=>'fasta');
-   my $fout = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.fna", -format=>'fasta');
-
-   # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-   # read in sequences; remove small contigs; replace ambig with N, sort on length
-   my $ncontig = 0;
-   my $contigprefix = $locustag || $prefix || $outdir || '';
-   $contigprefix .= '_' if $contigprefix;
-   my $total_bp = 0;
-   my @sequences;
-   while (my $seq = $fin->next_seq) {
-      my $id =$seq->id;
-      if ($seq->length < $mincontiglen) {
-         msg("Skipping short (<$mincontiglen bp) contig: $id");
-         $contig_id{$id}='too short';
-         $id_contig{$id}='too short';         
-         next;
-      }
-      else {
-          push (@sequences,$seq);
-      }
-   }
-   if (!$nolengthsort){
-      @sequences =sort {$b->length <=>$a->length} @sequences;
-   } 
-
-   for my $seq (@sequences){
-      $ncontig++;      
-      my $id =$seq->id;
-      my $id_sort = sprintf "${contigprefix}%d", $ncontig;  
-      $contig_id{$id} = $id_sort;     
-      $id_contig{$id_sort}{'id'} = $id;     
-      $id_contig{$id_sort}{'length'} = $seq->length;
-
-      if ($id =~ m/\|/) {
-         msg("Changing illegal '|' to '_' in sequence name: $id");
-         $id =~ s/\|/_/g;
-      }
-   # http://www.ncbi.nlm.nih.gov/genomes/static/Annotation_pipeline_README.txt
-   # leave contigs names as-is unless they are in --compliant mode or want --centre set
-      if ($centre) {  
-         $id = sprintf "gnl|$centre|${contigprefix}%d", $ncontig;
-      }
-
-      my $s = $seq->seq;
-      $s = uc($s);
-      $s =~ s/[*-]//g;      # replace pads/gaps with nothing
-      $s =~ s/[^ACTG]/N/g;  # replace wacky IUPAC with N
-
-      $seq->id($id);
-      $seq->seq($s);
-      $seq->desc(undef);
-      $fout->write_seq($seq);
-
-      $seq{$id}{DNA} = $seq;
-      push @seq, $id;  # this array it used to preserve original contig order
-      $total_bp += $seq->length;
-   }
-
-   undef $fin;
-   undef $fout; 
-
-   msg("Wrote $ncontig contigs totalling $total_bp bp.");
-   if ($ncontig < 1){
-      nofasta("FASTA file '$in' contains no suitable sequence entries");  
-      next;
-   } 
-   $total_osum++; #fasta is approved from here on and thus counted
-
-
-   #Declining Prokka for large bins (unbinned or small contigs)  
+   my $count = 0;
+   my $total_bp = 0;  
    my $toobig;
-   if ($total_bp < 15000000){
-       $toobig=0;
+   
+   if ($aaonly){
+      $toobig=1;
+      my $fin = Bio::SeqIO->new(-file=>$in, -format=>'fasta');
+      my $fout = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.faa", -format=>'fasta');
+      
+      my @sequences;      
+      while (my $seq = $fin->next_seq) {
+         my $id =$seq->id;  
+         if ($id =~ m/---/) {
+            msg("Changing illegal '---' to '_' in sequence name: $id");
+            $id =~ s/---/_/g; # collapse ---. It messes up the flow in hmmseach bioperl
+         }  
+         if ($id =~ m/\|/) {
+            msg("Changing illegal '|' to '_' in sequence name: $id");
+            $id =~ s/\|/_/g;
+         }
+         push (@sequences,$seq);           
+         $count++;
+      }
+      open my $prodigal_fh, '>', "$dir/prodigal.fh" or die "could not open $dir/prodigal.fh" ;
+      
+      my $protein = 0;#
+      my $protprefix = 'protein';#
+      $protprefix .= '_' if $protprefix;#
+      
+      for my $seq (@sequences){ 
+         $protein++; 
+         my $l= $seq->length;
+         my $id = "$protein;;$l;;1";    
+         my $d= $seq->desc;
+         if ($d =~ m/---/) {
+            msg("Changing illegal '---' to '_' in sequence name: $d");
+            $d =~ s/---/_/g; # collapse ---. It messes up the flow in hmmseach bioperl
+         }    
+         if ($id =~ m/\|/) {
+            msg("Changing illegal '|' to '_' in sequence name: $id");
+            $id =~ s/\|/_/g;
+         }       
+         my $s = $seq->seq;
+         $s = uc($s);  
+                
+         $seq->id($id);
+         $seq->seq($s);
+         $seq->desc($d);                 
+         $fout->write_seq($seq);
+         
+         $seq{$id}{DNA} = $seq;
+         push @seq, $id;  # this array it used to preserve original contig order     
+          
+         print {$prodigal_fh} "seqhdr=\"","$id\"","\n";
+         print {$prodigal_fh} ">$id","_1_","$l","_+\n";
+      }
    }
-   elsif ($total_bp >= 15000000){
-       $toobig=1;
-       msg("Bin too large: Not using --prokka, t(m)RNA, ncRNA, CRISPRs, tbl2ASN")
+   
+   else {   
+      my $fin = Bio::SeqIO->new(-file=>$in, -format=>'fasta');
+      my $fout = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.fna", -format=>'fasta');
+
+      # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+      # read in sequences; remove small contigs; replace ambig with N, sort on length
+      my $ncontig = 0;
+      my $contigprefix = $locustag || $prefix || $outdir2 || '';
+      $contigprefix .= '_' if $contigprefix;
+#     my $total_bp = 0;
+      my @sequences;
+      while (my $seq = $fin->next_seq) {
+         my $id =$seq->id;
+         if ($seq->length < $mincontiglen) {
+            msg("Skipping short (<$mincontiglen bp) contig: $id");
+            $contig_id{$id}='too short';
+            $id_contig{$id}='too short';         
+            next;
+         }
+         else {
+            push (@sequences,$seq);
+         }
+      }
+      if (!$nolengthsort){
+         @sequences =sort {$b->length <=>$a->length} @sequences;
+      } 
+
+      for my $seq (@sequences){
+         $ncontig++;      
+         my $id =$seq->id;
+         my $id_sort = sprintf "${contigprefix}%d", $ncontig;  
+         $contig_id{$id} = $id_sort;     
+         $id_contig{$id_sort}{'id'} = $id;     
+         $id_contig{$id_sort}{'length'} = $seq->length;
+
+         if ($id =~ m/\|/) {
+            msg("Changing illegal '|' to '_' in sequence name: $id");
+            $id =~ s/\|/_/g;
+         }
+      # http://www.ncbi.nlm.nih.gov/genomes/static/Annotation_pipeline_README.txt
+      # leave contigs names as-is unless they are in --compliant mode or want --centre set
+         if ($centre) {  
+            $id = sprintf "gnl|$centre|${contigprefix}%d", $ncontig;
+         }
+         if ($shortid) {  
+            $id = sprintf "c${contigprefix}%d", $ncontig;
+         }
+
+         my $s = $seq->seq;
+         $s = uc($s);
+         $s =~ s/[*-]//g;      # replace pads/gaps with nothing
+         $s =~ s/[^ACTG]/N/g;  # replace wacky IUPAC with N
+
+         $seq->id($id);
+         $seq->seq($s);
+         $seq->desc(undef);
+         $fout->write_seq($seq);
+
+         $seq{$id}{DNA} = $seq;
+         push @seq, $id;  # this array it used to preserve original contig order
+         $total_bp += $seq->length;
+      }
+
+      undef $fin;
+      undef $fout; 
+
+      msg("Wrote $ncontig contigs totalling $total_bp bp.");
+      if ($ncontig < 1){
+         nofasta("FASTA file '$in' contains no suitable sequence entries");  
+         next;
+      } 
+      $total_osum++; #fasta is approved from here on and thus counted
+
+      #Declining Prokka for large bins (unbinned or small contigs)  
+
+      if ($total_bp < 15000000){
+         $toobig=0;
+      }
+      elsif ($total_bp >= 15000000){
+         $toobig=1;
+         msg("Bin too large: Not using --prokka, t(m)RNA, ncRNA, CRISPRs, tbl2ASN")
+      }
    }
 
    #$centre or err("You must set --centre or the NCBI tbl2asn tool won't work properly, sorry.");
@@ -713,7 +897,14 @@ if ($compliant) {
    my $stringent2= "-E %e";
 
    # these should accept hmm on STDIN and write report to STDOUT
-   my $HMMER3CMD = "hmmsearch $stringent2   --noali --notextw --acc --cpu 1 - $dir/mytargets.faa";
+   
+   my $HMMER3CMD;
+   if ($aaonly) {
+      $HMMER3CMD = "hmmsearch $stringent2   --noali --notextw --acc --cpu 1 - $dir/$outdir2/$prefix.faa";
+   }
+   else {
+      $HMMER3CMD = "hmmsearch $stringent2   --noali --notextw --acc --cpu 1 - $dir/mytargets.faa";
+   }
                  
    # check BioPerl version
    my $minbpver = "1.006002"; # for Bio::SearchIO::hmmer3
@@ -747,13 +938,11 @@ if ($compliant) {
    if ($kingdom =~ m/bac|prok/i) {
      $kingdom = 'Bacteria';
      $gcode ||= 11;
-#     $rnammer_mode = 'bac';
      $barrnap_mode = 'bac';
    }
    elsif ($kingdom =~ m/arch/i) {
      $kingdom = 'Archaea';  
      $gcode ||= 11;
-#     $rnammer_mode = 'arc';
      $barrnap_mode = 'arc';
    }
    else {
@@ -770,10 +959,6 @@ if ($compliant) {
 
    add_bundle_to_path();
 
-#   if ($rnammer and $tools{'rnammer'}->{HAVE}) {
-#      msg("Will use RNAmmer instead of Barrnap for rRNA prediction");
-#      $tools{'barrnap'}->{HAVE} = 0;
-#                                              }
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # check if optional tools are installed if the option was enabled
    
@@ -813,7 +998,7 @@ if ($compliant) {
          my $aragorn_opt = '';
          # -l : Assume that each sequence has a linear topology. Search does not wrap
          # -w : batch mode
-         my $cmd = "aragorn -l -gc$gcode $aragorn_opt -w \Q$dir/$outdir/$prefix.fna\E"; # -t/-m 
+         my $cmd = "aragorn -l -gc$gcode $aragorn_opt -w \Q$dir/$outdir2/$prefix.fna\E"; # -t/-m 
          msg("Running: $cmd");
          my $num_trna=0;
          open TRNA, '-|', $cmd;
@@ -883,70 +1068,34 @@ if ($compliant) {
       }
    }
    elsif ($toobig == 1){ 
-      msg("Bin too large; ignoring --prokka or --trna : Not predicting tRNAs and tmRNAs");
+      if ($aaonly){
+         msg("Only annotating proteins");
+         }
+      else{ 
+         msg("Bin too large; ignoring --prokka or --trna : Not predicting tRNAs and tmRNAs");
+      }
    }
-
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # rRNA
-   if (!$norrna){
-   msg("Predicting Ribosomal RNAs");
-      if ($tools{'barrnap'}->{HAVE}) {
-         msg("Running Barrnap with $cpus threads");
-         my $num_rrna=0;
-         open my $BARRNAP, '-|', "barrnap --kingdom $barrnap_mode --threads $cpus --quiet \Q$dir/$outdir/$prefix.fna\E";
-         my $gff = Bio::Tools::GFF->new(-fh => $BARRNAP, -gff_version => 3);
-         while (my $feat = $gff->next_feature) {
-            $feat->remove_tag('Name'); # only want /product
-            push @{$seq{$feat->seq_id}{FEATURE}}, $feat;
-            $num_rrna++;
-            msg("$num_rrna", $feat->seq_id, $feat->start, $feat->get_tag_values('product'));
+   unless ($aaonly){
+      if (!$norrna){
+         msg("Predicting Ribosomal RNAs");
+            if ($tools{'barrnap'}->{HAVE}) {
+            msg("Running Barrnap with $cpus threads");
+            my $num_rrna=0;
+            open my $BARRNAP, '-|', "barrnap --kingdom $barrnap_mode --threads $cpus --quiet \Q$dir/$outdir2/$prefix.fna\E";
+            my $gff = Bio::Tools::GFF->new(-fh => $BARRNAP, -gff_version => 3);
+            while (my $feat = $gff->next_feature) {
+               $feat->remove_tag('Name'); # only want /product
+               push @{$seq{$feat->seq_id}{FEATURE}}, $feat;
+               $num_rrna++;
+               msg("$num_rrna", $feat->seq_id, $feat->start, $feat->get_tag_values('product'));
+            }
+         undef $gff;
+         msg("Found $num_rrna rRNAs");   
          }
-      undef $gff;
-      msg("Found $num_rrna rRNAs");   
       }
-   }
-=pod
-   elsif ($tools{'rnammer'}->{HAVE}) {
-      msg("Running RNAmmer");
-      my $rnammerfn = "$dir/$outdir/rnammer.xml";
-      my $num_rrna = 0;
-      my $rnammer_opt = $cpus != 1 ? "-multi" : "";
-      runcmd("rnammer -S $rnammer_mode $rnammer_opt -xml \Q$rnammerfn\E \Q$dir/$outdir/$prefix.fna\E");
-      my $xml = XML::Simple->new(ForceArray => 1);
-      my $data = $xml->XMLin($rnammerfn);
-      for my $entry (@{$data->{entries}[0]->{entry}}) {
-         my $sid = $entry->{sequenceEntry}[0];
-         next unless exists $seq{$sid};
-         my $desc = $entry->{mol}[0];
-         $desc =~ s/s_r/S ribosomal /i; # make it English '23S_rRNA => 23S ribosomal RNA'
-         $num_rrna++;
-         my $tool = "RNAmmer:".$tools{rnammer}->{VERSION};
-         push @{$seq{$sid}{FEATURE}}, Bio::SeqFeature::Generic->new( 
-            -primary    => 'rRNA',
-            -seq_id     => $sid,
-            -source     => $tool, # $data->{predictor}[0]
-            -start      => $entry->{start}[0],
-            -end        => $entry->{stop}[0],
-            -strand     => $entry->{direction}[0],
-            -score      => undef, # $entry->{score}[0],
-            -frame      => 0,
-            -tag        => {
-              'product' => $desc,
-              'inference' => "COORDINATES:profile: $tool",  # FIXME version ?
-                           }
-         );
-         msg(join "\t", $num_rrna, $desc, $sid, $entry->{start}[0], $entry->{stop}[0], $entry->{direction}[0]);
-      }
-      delfile($rnammerfn);
-      msg("Found $num_rrna rRNAs");
-   }
-   else {
-      msg("You need either Barrnap or RNAmmer installed to predict rRNAs!");
-        }
-        
-   }
-=cut
- 
+   } 
    else {
       msg("Disabling rRNA search: --kingdom=$kingdom or --norrna=$norrna");
    }
@@ -963,7 +1112,7 @@ if ($compliant) {
             my $num_ncrna = 0;
             my $tool = "Infernal:".$tools{'cmscan'}->{VERSION};
             my $icpu = $cpus || 1;
-            my $cmd = "cmscan --rfam --cpu $icpu -E $eval --tblout /dev/stdout -o /dev/null --noali $cmdb \Q$dir/$outdir/$prefix.fna\E";
+            my $cmd = "cmscan --rfam --cpu $icpu -E $eval --tblout /dev/stdout -o /dev/null --noali $cmdb \Q$dir/$outdir2/$prefix.fna\E";
             msg("Running: $cmd");
             open INFERNAL, '-|', $cmd;
             while (<INFERNAL>) {
@@ -999,9 +1148,13 @@ if ($compliant) {
       }
    }
    elsif ($toobig == 1){ 
-      msg("Bin too large; ignoring --prokka or --ncrna : Not predicting ncRNAs");
+      if ($aaonly){
+         msg("Only annotating proteins");
+         }
+      else{ 
+         msg("Bin too large; ignoring --prokka or --ncrna : Not predicting ncRNAs");
+      }
    }
-
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Tally all the RNA features __ which we want to exclude overlaps with CDS __
 
@@ -1018,7 +1171,7 @@ if ($compliant) {
          if ($tools{'minced'}->{HAVE}) {
             msg("Searching for CRISPR repeats");
             my $num_crispr=0;
-            open my $MINCED, '-|', "minced -gff \Q$dir/$outdir/$prefix.fna\E";
+            open my $MINCED, '-|', "minced -gff \Q$dir/$outdir2/$prefix.fna\E";
             my $gff = Bio::Tools::GFF->new(-fh => $MINCED, -gff_version => 3);
             while (my $feat = $gff->next_feature) {
                # format it properly for NCBI
@@ -1037,19 +1190,32 @@ if ($compliant) {
       }
    }
    elsif ($toobig == 1){ 
-      msg("Bin too large; ignoring --prokka or --crispr : Not predicting CRISPRS");
+      if ($aaonly){
+         msg("Only annotating proteins");
+      }
+      else{ 
+         msg("Bin too large; ignoring --prokka or --crispr : Not predicting CRISPRS");
+      }
    }
-
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # CDS
-   msg("Predicting coding sequences");
-   my $prodigal_mode = ($total_bp >= 500000 && $total_bp <= 14000000) ? 'single' : 'meta';
-   msg("Contigs total $total_bp bp, so using $prodigal_mode mode");
-   my $num_cds=0;
-   my $cmd0 = "prodigal -i \Q$dir/$outdir/$prefix.fna\E -m -g $gcode -p $prodigal_mode -f sco"; #removed -c because of fragmented genomes, -q removed quiet for troubleshootpurpose
-   msg("Running: $cmd0");
-   open my $PRODIGAL, '-|', $cmd0;
-   my $sid;
+   my $num_cds=0;  
+   my $sid; 
+   my $PRODIGAL;
+
+   if ($aaonly){
+      open $PRODIGAL, "<$dir/prodigal.fh" or die $!;
+   }
+   else{
+      msg("Predicting coding sequences");
+      my $prodigal_mode = ($total_bp >= 500000 && $total_bp <= 14000000) ? 'single' : 'meta';
+      msg("Contigs total $total_bp bp, so using $prodigal_mode mode");
+
+      my $cmd0 = "prodigal -i \Q$dir/$outdir2/$prefix.fna\E -m -g $gcode -p $prodigal_mode -f sco"; #removed -c because of fragmented genomes, -q removed quiet for troubleshootpurpose
+      msg("Running: $cmd0");
+
+      open  $PRODIGAL, '-|', $cmd0;
+   }
    #create a reference file to trace back the bin to the Prodigal metadata;
    open my $prodigal_id_fh , '>>', "$dir/prodigal.txt" or die "Could not open file\n";
    print {$prodigal_id_fh} "$in\n";
@@ -1058,11 +1224,11 @@ if ($compliant) {
       if ($_ =~ /^#/){
          print {$prodigal_id_fh} "\t$_\n";
       };
-      if (m/seqhdr="([^\s\"]+)"/) {  
+      if (m/seqhdr="([^\s\"]+)"/) {
          $sid = $1;
          next;
       }
-      elsif (m/^>\d+_(\d+)_(\d+)_([+-])$/) {   
+      elsif (m/^>.+_(\d+)_(\d+)_([+-])$/) {   
          my $tool = "Prodigal:".$tools{prodigal}->{VERSION}; # FIXME: why inner loop?
          my $cds = Bio::SeqFeature::Generic->new(
             -primary    => 'CDS',
@@ -1074,12 +1240,26 @@ if ($compliant) {
             -score      => undef,
             -frame      => 0,
             -tag        => {
-              'inference' => "ab initio prediction: $tool", 
+            'inference' => "ab initio prediction: $tool", 
                            }
          );
-         my $nulen = $cds->length; my $aalen = ($cds->length)/3;
-         $cds->add_tag_value('NUlength', $nulen);
-         $cds->add_tag_value('AAlength', $aalen);
+         if ($aaonly){
+            $cds->add_tag_value('part', '0');
+            $cds->add_tag_value('start', '1');
+            $cds->add_tag_value('end', $seq{$cds->seq_id}{DNA}->length);
+            push @{$seq{$sid}{FEATURE}}, $cds; 
+        
+            my $aalen = $cds->length;
+            $cds->add_tag_value('NUlength', 'NA');
+            $cds->add_tag_value('AAlength', $aalen);   
+            $num_cds++;    
+         }
+        
+         else{  
+            my $nulen = $cds->length; my $aalen = ($cds->length)/3;
+            $cds->add_tag_value('NUlength', $nulen);
+            $cds->add_tag_value('AAlength', $aalen);
+         }
          
          my $overlap;
          for my $rna (@allrna) {
@@ -1089,23 +1269,25 @@ if ($compliant) {
                last;
             }	
          }
-         # mark partial genes on the ends of the contigs
-         if ($cds->start <= 3) { $cds->add_tag_value('part', '1');
-         }
-         elsif ($cds->end >= $seq{$cds->seq_id}{DNA}->length - 2)  { $cds->add_tag_value('part', '1');
-         }
-         else {$cds->add_tag_value('part', '0');}         
-         # mitochondria are highly packed, so don't exclude as CDS/tRNA often overlap.
-         if ($overlap) {
-         my $type = $overlap->primary_tag;
-            msg("Excluding CDS which overlaps existing RNA ($type) at $sid:$1..$2 on $3 strand");
-         }
-         else {
-            $num_cds++;
-            push @{$seq{$sid}{FEATURE}}, $cds;
-            ## BUG James Doonan - ensure no odd features extending beyond contig
-            if ($cds->end > $seq{$cds->seq_id}{DNA}->length )  { 
-               err("CDS end", $cds->end, "is beyond length", $seq{$sid}{DNA}->length, "in contig $sid") 
+         unless ($aaonly){
+            # mark partial genes on the ends of the contigs
+            if ($cds->start <= 3) { $cds->add_tag_value('part', '1');
+            }
+            elsif ($cds->end >= $seq{$cds->seq_id}{DNA}->length - 2)  { $cds->add_tag_value('part', '1');
+            }
+            else {$cds->add_tag_value('part', '0');}         
+            # mitochondria are highly packed, so don't exclude as CDS/tRNA often overlap.
+            if ($overlap) {
+            my $type = $overlap->primary_tag;
+               msg("Excluding CDS which overlaps existing RNA ($type) at $sid:$1..$2 on $3 strand");
+            }
+            else {
+               $num_cds++;
+               push @{$seq{$sid}{FEATURE}}, $cds;
+               ## BUG James Doonan - ensure no odd features extending beyond contig
+               if ($cds->end > $seq{$cds->seq_id}{DNA}->length )  { 
+                  err("CDS end", $cds->end, "is beyond length", $seq{$sid}{DNA}->length, "in contig $sid") 
+               }
             }
          }
       }
@@ -1131,21 +1313,21 @@ if ($compliant) {
             $gram = $gram =~ m/\+|[posl]/i ? 'gram+' : 'gram-';
             msg("Looking for signal peptides at start of predicted proteins");
             msg("Treating $kingdom as $gram");
-            my $spoutfn = "$outdir/signalp.faa";
+            my $spoutfn = "$outdir2/signalp.faa";
             open my $spoutfh, '>', $spoutfn;
             my $spout = Bio::SeqIO->new(-fh=>$spoutfh, -format=>'fasta');
             my %cds;
-            my $count=0;
+            my $countx=0;
             for my $sid (@seq) {
                for my $f (@{ $seq{$sid}{FEATURE} }) {
                   next unless $f->primary_tag eq 'CDS';
-                  $cds{++$count} = $f;
+                  $cds{++$countx} = $f;
                   my $seq = $f->seq->translate(-codontable_id=>$gcode, -complete=>0);
-                  $seq->display_id($count);
+                  $seq->display_id($countx);
                   $spout->write_seq($seq);
                }
             }
-            if ($count > $SIGNALP_MAXSEQ) {
+            if ($countx > $SIGNALP_MAXSEQ) {
                msg("Skipping signalp because it can not handle >$SIGNALP_MAXSEQ sequences.");
             }
             else {
@@ -1177,12 +1359,12 @@ if ($compliant) {
                         # 'ID' => $ID,
                         # 'Parent' => $x[0],  # don't have proper IDs yet....
                           'product' => "putative signal peptide", 
-                          'inference' => "ab initio prediction: $tool", 
-                          'note' => "predicted cleavage at residue $x[3] with probability $prob",
+                        'inference' => "ab initio prediction: $tool", 
+                             'note' => "predicted cleavage at residue $x[3] with probability $prob",
                                        }
-                     );
-                     push @{$seq{$parent->seq_id}{FEATURE}}, $sigpep;
-                     $num_sigpep++;
+                    );
+                    push @{$seq{$parent->seq_id}{FEATURE}}, $sigpep;
+                    $num_sigpep++;
                   }
                   else {
                      # msg("sigp$sigpver: @x");
@@ -1204,8 +1386,8 @@ if ($compliant) {
                         # 'ID' => $ID,
                         # 'Parent' => $x[0],  # don't have proper IDs yet....
                           'product' => "putative signal peptide", 
-                          'inference' => "ab initio prediction: $tool", 
-                          'note' => "predicted cleavage at residue $x[2]",
+                        'inference' => "ab initio prediction: $tool", 
+                             'note' => "predicted cleavage at residue $x[2]",
                                        }
                      );
                      push @{$seq{$parent->seq_id}{FEATURE}}, $sigpep;
@@ -1221,9 +1403,10 @@ if ($compliant) {
          }
       }
    }
+  
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Annotate CDS:primary data source is a set of HMM profiles of 126 metabolic proteins
- 
+    
    foreach my $i (@hmmdatabases) {
       msg("Preparing HMMER annotation source");
       -r "$i.h3i" or err("Your HMM is not indexed, please run: hmmpress $i #*Make sure to use the full path");
@@ -1248,23 +1431,35 @@ if ($compliant) {
          STRNGT => $eval,
       };
    }
+   
    # we write out all the CDS which haven't been annotated yet and then search them
-   my $faa_name = "$dir/mytargets.faa";
-   open my $faa, '>', $faa_name;
-   my %cds;
-   my $count=0;
-   for my $sid (@seq) {
-      for my $f (@{ $seq{$sid}{FEATURE} }) {
-         next unless $f->primary_tag eq 'CDS';
-         next if $f->has_tag('product');
-	 $cds{++$count} = $f;
-	 print $faa ">$count;;$f->{'_gsf_tag_hash'}->{'AAlength'}->[0];;$f->{'_gsf_tag_hash'}->{'part'}->[0]\n",
-         $f->seq->translate(-codontable_id=>$gcode, -complete=>0)->seq,"\n";
+   
+   my %cds; 
+   if ($aaonly){
+      my $countp=0;
+      open my $faa, '<', $aaonly;
+      for my $sid (@seq) {
+         for my $f (@{ $seq{$sid}{FEATURE} }) {
+	    $cds{++$countp} = $f;
+         }
       }
    }
-   close $faa;
+   my $faa_name = "$dir/mytargets.faa";
+   unless ($aaonly){
+      open my $faa, '>', $faa_name;
+      for my $sid (@seq) {
+         for my $f (@{ $seq{$sid}{FEATURE} }) {
+            next unless $f->primary_tag eq 'CDS';
+            next if $f->has_tag('product');
+	    $cds{++$count} = $f;
+	    print $faa ">$count;;$f->{'_gsf_tag_hash'}->{'AAlength'}->[0];;$f->{'_gsf_tag_hash'}->{'part'}->[0]\n",
+            $f->seq->translate(-codontable_id=>$gcode, -complete=>0)->seq,"\n";
+         }
+      }
+      close $faa;
+   }   
    msg("There are still $count unannotated CDS left (started with $num_cds)");
-   
+
    # for each sequence/profile database in order,
    for my $db (@database) {
       # create a unqiue output name so we can save them in --debug mode
@@ -1282,7 +1477,7 @@ if ($compliant) {
       msg("Annotating with >>> $db->{STRNGT} <<<");
 
       my $paropts = $cpus > 0 ? " -j $cpus" : "";
-      my $hmm_name = "$dir/$outdir/$outname.".$db->{FMT};
+      my $hmm_name = "$dir/$outdir2/$outname.".$db->{FMT};
 
       if(-s $db->{DB} > 150000000 ){
          runcmd("${PARALLELCMD}$paropts -a $db->{DB} $cmd > \Q$hmm_name\E ");}#2> /dev/null
@@ -1294,55 +1489,61 @@ if ($compliant) {
       my $eval_out =$ekegg;
 
       if ($nokegg){
-      $eval_out =$enokegg;
+         $eval_out =$enokegg;
       }
      
-      open my $hmm_fh, '>>', "$dir/$outdir/$prefix.$dbid.hmm.tbl";
+      open my $hmm_fh, '>>', "$dir/$outdir2/$prefix.$dbid.hmm.tbl";
       my $bls = Bio::SearchIO->new(-file=>$hmm_name, -format=>$db->{FMT});
+      
       while (my $res = $bls->next_result) {
-         while(my $hit = $res->next_hit){ 
+         while(my $hit = $res->next_hit){
             my $name=$hit->name;
-            my ($CDS_id,$tlength,$partial) = split( m/;;/, $name, 3);
+            my ($CDS_id,$qlength,$partial) = split( m/;;/, $name, 3);
             my $DESC=$res->{'_querydesc'};
             my $NAME=$res->{'_queryname'};
             my $ACC=$res->{'_queryacc'};
             my $bit=$hit->score;
             my $evalue= $hit->significance;   
-            my $qlength=$res->{'_querylength'}; my $Qlow=$qlength/100*(100-$sizeperc); my $Qhigh=$qlength/100*(100+$sizeperc);
-                                                my $Qpartlow=$qlength/100*(100-$sizepercpart); my $Qparthigh=$qlength/100*(100+$sizepercpart);
+            my $tlength=$res->{'_querylength'}; my $Tlow=$tlength/100*(100-$sizeperc); my $Thigh=$tlength/100*(100+$sizeperc); #hmmsearch reverts target and query sequence
+                                                my $Tpartlow=$tlength/100*(100-$sizepercpart); my $Tparthigh=$tlength/100*(100+$sizepercpart);                         
             if ($partial == 0) {
-               if($tlength > $Qlow && $tlength < $Qhigh){
-                  if ($qlength <= $smalltrgt){ #qlentgh of tlength; not sure yet
+               if($qlength > $Tlow && $qlength < $Thigh){
+                  if ($qlength <= $smalltrgt){ #qlength or tlength; not sure yet
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
+                #    print "A $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                   if (($qlength >= $smalltrgt) and ($evalue <= $eval_out)){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
+                 #   print "b $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                }
             }
             else {
-               if($qlength > $Qpartlow && $tlength < $Qparthigh){
+               if($qlength > $Tpartlow && $tlength < $Tparthigh){
                   if ($qlength <= $smalltrgt){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
+                 #   print "c $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                   if (($qlength >= $smalltrgt) and ($evalue <= $part_eval_out)){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
+                 #   print "d $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                }
             }
          }
       }
       close $hmm_fh;
-      runcmd("cat \Q$dir/$outdir/$prefix.$dbid.hmm.tbl\E >>\Q$dir/$outdir/$prefix.total.tbl\E");#adds up after repeated use, even when using force
-      delfile($hmm_name,  "$dir/$outdir/$prefix.$dbid.hmm.tbl"); #<- hmm output
+      runcmd("cat \Q$dir/$outdir2/$prefix.$dbid.hmm.tbl\E >>\Q$dir/$outdir2/$prefix.total.tbl\E");#adds up after repeated use, even when using force
+      delfile($hmm_name,  "$dir/$outdir2/$prefix.$dbid.hmm.tbl"); #<- hmm output
    }
    
-   runcmd("sort -nr -t '\t' -k1,1 -k3,3 \Q$dir/$outdir/$prefix.total.tbl\E >\Q$dir/$outdir/$prefix.total.sort.tbl\E");
-   delfile ("$dir/$outdir/$prefix.total.tbl");
-   runcmd("awk '!x[\$1]++' \Q$dir/$outdir/$prefix.total.sort.tbl\E > \Q$dir/$outdir/$prefix.total.uniq.tbl\E");
-  
+   runcmd("sort -nr -t '\t' -k1,1 -k3,3 \Q$dir/$outdir2/$prefix.total.tbl\E >\Q$dir/$outdir2/$prefix.total.sort.tbl\E");
+   delfile ("$dir/$outdir2/$prefix.total.tbl");
+   runcmd("awk '!x[\$1]++' \Q$dir/$outdir2/$prefix.total.sort.tbl\E > \Q$dir/$outdir2/$prefix.total.uniq.tbl\E");
+
    my $num_cleaned=0;
-   open (UNIQ,  "<", "$dir/$outdir/$prefix.total.uniq.tbl")  or die "Could not open file\n";
+   open (UNIQ,  "<", "$dir/$outdir2/$prefix.total.uniq.tbl")  or die "Could not open file\n";
+
    while ( my $line = <UNIQ> ) {
       if ($line !~ /^#/){ 
          chomp $line;
@@ -1358,19 +1559,23 @@ if ($compliant) {
          foreach my $i(@ko){
             if (defined $cds{$pid}){
                $cds{$pid}->add_tag_value('KO', $i);
+               $cds{$pid}->add_tag_value('phagebinary', 'NA')
             } 
          }
          if ($acc =~ m/hydro/g){
             $cds{$pid}->add_tag_value('KO', 'hydro'); 
+            $cds{$pid}->add_tag_value('phagebinary', 'NA')
          }
-         if ($acc =~ m/PHAGE/g){
-            $cds{$pid}->add_tag_value('KO', 'phage');
+         if ($acc =~ m/VOG/g){
+            $cds{$pid}->add_tag_value('phagebinary', 'phage');
+            $cds{$pid}->add_tag_value('KO',  $qname);
             $cds{$pid}->add_tag_value('VOG', $qname);
             $cds{$pid}->add_tag_value('VQ', $VirQuot{$qname});
             $cds{$pid}->add_tag_value('gene', $qname);
          }
          if ($acc =~ m/UNKNOWN/g){
             $cds{$pid}->add_tag_value('KO', 'unknown');
+            $cds{$pid}->add_tag_value('phagebinary', 'NA')
          }
          my $cleanprod = $rawproduct ? $prod : cleanup_product($prod);
          if ($cleanprod ne $prod) {
@@ -1392,10 +1597,10 @@ if ($compliant) {
             elsif ($cds{$pid}->{'_gsf_tag_hash'}->{'part'}->[0] == '1'){
             $cds{$pid}->add_tag_value('product', 'partial '.$cleanprod);
             }
-            if ($cds{$pid}->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'phage'){
+            if ($cds{$pid}->{'_gsf_tag_hash'}->{'phagebinary'}->[0] eq 'phage'){
             $cds{$pid}->add_tag_value('phage', '1');
             }
-            elsif ($cds{$pid}->{'_gsf_tag_hash'}->{'KO'}->[0] ne 'phage'){
+            elsif ($cds{$pid}->{'_gsf_tag_hash'}->{'phagebinary'}->[0] ne 'phage'){
             $cds{$pid}->add_tag_value('phage', '0');
             }
             #$cds{$pid}->add_tag_value('product', $cleanprod);
@@ -1414,120 +1619,126 @@ if ($compliant) {
    close UNIQ;
    delfile($faa_name);
 
+#print Dumper \%cds;
+
    #blast remainig CDS
+   unless ($aaonly){   
 
-   msg("BLASTing remaining proteins");
+      msg("BLASTing remaining proteins");
 
-   my $BLASTPCMD = "blastp -query - -db %d -evalue %e -num_threads 1 -num_descriptions 1 -num_alignments 1 -seg no";
+      my $BLASTPCMD = "blastp -query - -db %d -evalue %e -num_threads 1 -num_descriptions 1 -num_alignments 1 -seg no";
 
-   my @blastdatabase = ({
-      DB  => "$databasedir/prokka/uniprot_sprot",
-      SRC => 'similar to AA sequence:UniProtKB:',
-      FMT => 'blast',
-      CMD => $BLASTPCMD,},
-   );
-   if ($toobig == 0){
-      if ($prokka){
-         for my $db (@blastdatabase){
-         # we write out all the CDS which haven't been annotated yet and then search them
-            my $outname = $db->{DB};
-            $outname =~ s{^.*/}{};
-            my $faa_name = "$dir/mytargets.faa";
-            open my $faa, '>', $faa_name;
-            my %cds;
-            my $count=0;
-            for my $sid (@seq) {
-               for my $f (@{ $seq{$sid}{FEATURE} }) {
-	          next unless $f->primary_tag eq 'CDS';
-                  next if $f->has_tag('product');
-	          $cds{++$count} = $f;
-	          print $faa ">$count\n",
-                  $f->seq->translate(-codontable_id=>$gcode, -complete=>0)->seq,"\n";
+      my @blastdatabase = ({
+         DB  => "$databasedir/prokka/uniprot_sprot",
+         SRC => 'similar to AA sequence:UniProtKB:',
+         FMT => 'blast',
+         CMD => $BLASTPCMD,},
+      );
+
+      if ($toobig == 0){
+         if ($prokka){
+            for my $db (@blastdatabase){
+            # we write out all the CDS which haven't been annotated yet and then search them
+               my $outname = $db->{DB};
+               $outname =~ s{^.*/}{};
+               my $faa_name = "$dir/mytargets.faa";
+               open my $faa, '>', $faa_name;
+               my %cds;
+               my $count=0;
+               for my $sid (@seq) {
+                  for my $f (@{ $seq{$sid}{FEATURE} }) {
+	             next unless $f->primary_tag eq 'CDS';
+                     next if $f->has_tag('product');
+	             $cds{++$count} = $f;
+	             print $faa ">$count\n",
+                     $f->seq->translate(-codontable_id=>$gcode, -complete=>0)->seq,"\n";
+                  }
                }
-            }
-            close $faa;
+               close $faa;
      
-            next if $count <= 0;
-            msg("There are still $count unannotated CDS left (started with $num_cds)");
-            msg("Will use ", $db->{FMT}, "to search against", $db->{DB}, "with $cpus CPUs");
-            msg("Annotating CDS, please be patient.");
+               next if $count <= 0;
+               msg("There are still $count unannotated CDS left (started with $num_cds)");
+               msg("Will use ", $db->{FMT}, "to search against", $db->{DB}, "with $cpus CPUs");
+               msg("Annotating CDS, please be patient.");
 
-            my $cmd = $db->{CMD}; # get the right database!!!
-          #    $cmd =~ s/%i/{}/g;
-          #    $cmd =~ s/%o/{}.out/g;
-               $cmd =~ s/%e/$eval/g;
-               $cmd =~ s,%d,$db->{DB},g;
+               my $cmd = $db->{CMD}; # get the right database!!!
+             #    $cmd =~ s/%i/{}/g;
+             #    $cmd =~ s/%o/{}.out/g;
+                  $cmd =~ s/%e/$eval/g;
+                  $cmd =~ s,%d,$db->{DB},g;
 
           #
           # **** PARALLEL RUN! ****
           #
-            my $faa_bytes = -s $faa_name;
-            my $bsize = int($faa_bytes / $cpus / 2);
-            my $paropts = $cpus > 0 ? " -j $cpus" : "";
+               my $faa_bytes = -s $faa_name;
+               my $bsize = int($faa_bytes / $cpus / 2);
+               my $paropts = $cpus > 0 ? " -j $cpus" : "";
    
-            my $bls_name = "$dir/$outdir/$outname.".$db->{FMT}; 
-            runcmd(
-               "cat \Q$faa_name\E | ${PARALLELCMD2}$paropts --block $bsize --recstart '>' --pipe ". 
-               "$cmd > \Q$bls_name\E");
+               my $bls_name = "$dir/$outdir2/$outname.".$db->{FMT}; 
+               runcmd(
+                  "cat \Q$faa_name\E | ${PARALLELCMD2}$paropts --block $bsize --recstart '>' --pipe ". 
+                  "$cmd > \Q$bls_name\E");
    
-            my $num_cleaned=0;
-            my $bls = Bio::SearchIO->new(-file=>$bls_name, -format=>$db->{FMT}, -version=>$db->{VERSION});
-            while (my $res = $bls->next_result) {
-               my $hit = $res->next_hit or next;
-               my($pid,$prod,$gene,$EC) = ($res->query_name, $hit->description, '', '');
-               if ($prod =~ m/~~~/) {
-                  ($EC,$gene,$prod) = split m/~~~/, $prod;
-                  $EC =~ s/n\d+/-/g; # collapse transitionary EC numbers
-               }
-               my $cleanprod = $rawproduct ? $prod : cleanup_product($prod);      
-               if ($cleanprod ne $prod) {
-                  msg("Modify product: $prod => $cleanprod");
+               my $num_cleaned=0;
+               my $bls = Bio::SearchIO->new(-file=>$bls_name, -format=>$db->{FMT}, -version=>$db->{VERSION});
+               while (my $res = $bls->next_result) {
+                  my $hit = $res->next_hit or next;
+                  my($pid,$prod,$gene,$EC) = ($res->query_name, $hit->description, '', '');
+                  if ($prod =~ m/~~~/) {
+                     ($EC,$gene,$prod) = split m/~~~/, $prod;
+                     $EC =~ s/n\d+/-/g; # collapse transitionary EC numbers
+                  }
+                  my $cleanprod = $rawproduct ? $prod : cleanup_product($prod);      
+                  if ($cleanprod ne $prod) {
+                     msg("Modify product: $prod => $cleanprod");
                # we remove any special /gene or /EC if the /product is 'hypothetical protein' !
-                  if ($cleanprod eq $HYPO) {
-   	             $cds{$pid}->add_tag_value('note', $prod);
-  	             $cds{$pid}->remove_tag('gene') if $cds{$pid}->has_tag('gene');
-	             $cds{$pid}->remove_tag('EC_number') if $cds{$pid}->has_tag('EC_number');
-	             $EC = $gene = undef;
-	          }
-	          $num_cleaned++;
+                     if ($cleanprod eq $HYPO) {
+   	                $cds{$pid}->add_tag_value('note', $prod);
+  	                $cds{$pid}->remove_tag('gene') if $cds{$pid}->has_tag('gene');
+	                $cds{$pid}->remove_tag('EC_number') if $cds{$pid}->has_tag('EC_number');
+	                $EC = $gene = undef;
+	             }
+	             $num_cleaned++;
+                  }
+                  if ($cds{$pid}->{'_gsf_tag_hash'}->{'part'}->[0] == '0'){
+                  $cds{$pid}->add_tag_value('product', $cleanprod);
+                  }
+                  elsif ($cds{$pid}->{'_gsf_tag_hash'}->{'part'}->[0] == '1'){
+                  $cds{$pid}->add_tag_value('product', 'partial '.$cleanprod);
+                  }
+                  $cds{$pid}->add_tag_value('phage', '0');
+                  $cds{$pid}->add_tag_value('method', $db->{FMT});
+                  $cds{$pid}->add_tag_value('EC_number', $EC) if $EC;
+                  $cds{$pid}->add_tag_value('gene', $gene) if $gene;
+                 # only add /inference if this DB has a proper SRC to attribute to
+#                 $cds{$pid}->add_tag_value('inference', "$db->{SRC}\: ".$hit->name) if $db->{SRC};
                }
-               if ($cds{$pid}->{'_gsf_tag_hash'}->{'part'}->[0] == '0'){
-               $cds{$pid}->add_tag_value('product', $cleanprod);
-               }
-               elsif ($cds{$pid}->{'_gsf_tag_hash'}->{'part'}->[0] == '1'){
-               $cds{$pid}->add_tag_value('product', 'partial '.$cleanprod);
-               }
-               $cds{$pid}->add_tag_value('phage', '0');
-               $cds{$pid}->add_tag_value('method', $db->{FMT});
-               $cds{$pid}->add_tag_value('EC_number', $EC) if $EC;
-               $cds{$pid}->add_tag_value('gene', $gene) if $gene;
-               # only add /inference if this DB has a proper SRC to attribute to
-#               $cds{$pid}->add_tag_value('inference', "$db->{SRC}\: ".$hit->name) if $db->{SRC};
+               msg("Cleaned $num_cleaned /product names") if $num_cleaned > 0;
+               delfile($bls_name, $faa_name);
             }
-            msg("Cleaned $num_cleaned /product names") if $num_cleaned > 0;
-            delfile($bls_name, $faa_name);
          }
       }
-   }
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Label unannotated proteins as 'hypothetical protein'
 
-   my $num_hypo=0;
-   for my $sid (@seq) {
-      for my $f ( @{ $seq{$sid}{FEATURE} }) { 
-         if ($f->primary_tag eq 'CDS' and not $f->has_tag('product')) {
-         next if $f->{'_gsf_tag_hash'}->{'part'}->[0] == '1';
-         $f->add_tag_value('phage', '0'); #remaining non phage proteins get labelled
-         $f->add_tag_value('product', $HYPO);
-         $f->add_tag_value('method', 'non');#needed in line ....1377 to prevent hypoths to go into the mix  
-         $num_hypo++;
+      my $num_hypo=0;
+      for my $sid (@seq) {
+         for my $f ( @{ $seq{$sid}{FEATURE} }) { 
+            if ($f->primary_tag eq 'CDS' and not $f->has_tag('product')) {
+            next if $f->{'_gsf_tag_hash'}->{'part'}->[0] == '1';
+            $f->add_tag_value('phage', '0'); #remaining non phage proteins get labelled
+            $f->add_tag_value('product', $HYPO);
+            $f->add_tag_value('method', 'non');#needed in line ....1377 to prevent hypoths to go into the mix  
+            $num_hypo++;
+            }
          }
       }
+      msg("Labelling remaining $num_hypo proteins as '$HYPO'") if $num_hypo > 0;
+      # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+      # Add locus_tags and protein_id[CDS only] (and Parent genes if asked)
    }
-   msg("Labelling remaining $num_hypo proteins as '$HYPO'") if $num_hypo > 0;
-   # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-   # Add locus_tags and protein_id[CDS only] (and Parent genes if asked)
+
 
    msg("Adding /locus_tag identifiers");
    my $num_lt=0; 
@@ -1575,26 +1786,27 @@ if ($compliant) {
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Write it all out!
-  
-   msg("Writing outputs to $dir/$outdir/");
-   open my $gff_fh, '>', "$dir/$outdir/$prefix.gff";
-   open my $ovw_tsv_fh, '>', "$dir/$outdir/$prefix.tsv";
-   open my $kegg_fh, '>', "$dir/$outdir/$prefix.kegg";
+#  print Dumper \%seq;
+   msg("Writing outputs to $dir/$outdir2/");
+   open my $gff_fh, '>', "$dir/$outdir2/$prefix.gff";
+   open my $ovw_tsv_fh, '>', "$dir/$outdir2/$prefix.tsv";
+   open my $aaonly_tsv_fh, '>>', "$dir/$outdir2/$prefix.aaonly.tsv";
+   open my $kegg_fh, '>', "$dir/$outdir2/$prefix.kegg";
    open my $hmm_tot_fh, '>>', "$dir/metagenome.tsv";
-   open my $ovw_fh, '>', "$dir/$outdir/$prefix.ovw";
-   open my $tabel_fh, '>', "$dir/$outdir/$prefix.tabel";
-   my $faa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.hmm.faa", -format=>'fasta');
-   my $ffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.hmm.ffn", -format=>'fasta');
-   my $f16_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.f16", -format=>'fasta');
-   my $fsa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.fsa", -format=>'fasta');
-   my $f16fn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.fall", -format=>'fasta');
-   my $faaALL_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.all.faa", -format=>'fasta');
-   my $ffnALL_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/$prefix.all.ffn", -format=>'fasta');
+   open my $ovw_fh, '>', "$dir/$outdir2/$prefix.ovw";
+   open my $tabel_fh, '>', "$dir/$outdir2/$prefix.tabel";
+   my $faa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.hmm.faa", -format=>'fasta');
+   my $ffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.hmm.ffn", -format=>'fasta');
+   my $f16_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.f16", -format=>'fasta');
+   my $fsa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.fsa", -format=>'fasta');
+   my $f16fn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.fall", -format=>'fasta');
+   my $faaALL_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.all.faa", -format=>'fasta');
+   my $ffnALL_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/$prefix.all.ffn", -format=>'fasta');
    my $gff_factory = Bio::Tools::GFF->new(-gff_version=>$gffver);
-   my $hydrofaa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/hydrogenases/hydrogenases.faa", -format=>'fasta');
-   my $hydroffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/hydrogenases/hydrogenases.ffn", -format=>'fasta');
-   my $phagefaa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/phages/phages.faa", -format=>'fasta');
-   my $phageffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir/phages/phages.ffn", -format=>'fasta');
+   my $hydrofaa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/hydrogenases/hydrogenases.faa", -format=>'fasta');
+   my $hydroffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/hydrogenases/hydrogenases.ffn", -format=>'fasta');
+   my $phagefaa_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/phages/phages.faa", -format=>'fasta');
+   my $phageffn_fh = Bio::SeqIO->new(-file=>">$dir/$outdir2/phages/phages.ffn", -format=>'fasta');
 
 
    print {$hmm_tot_fh} "FASTA file\tLocus_tag\tContig\tHMM profile\tBit-score\tE-value\tCycle\tBinfolder\tGene\tEC number\tKO number\tDescription\n";
@@ -1603,27 +1815,33 @@ if ($compliant) {
       print $gff_fh "##sequence-region $id 1 ", $seq{$id}{DNA}->length, "\n";
    }
 
+   if ($aaonly){
+      print {$aaonly_tsv_fh} "Old locustag\tNew Locus_tag\t Old annotation\tNew annotation\n";
+   }
+
    my $fsa_desc = "[gcode=$gcode]";
    my %locacc;
    for my $sid (@seq) {
       my $ctg = $seq{$sid}{DNA};
       my $contig_end = $seq{$sid}{DNA}->length;
+      unless ($aaonly){
       $ctg->desc($fsa_desc);
       $fsa_fh->write_seq($ctg);
       $ctg->desc(undef);
+      }
       print {$tabel_fh} ">Feature $sid\n";
-      for my $f ( sort { $a->start <=> $b->start } @{ $seq{$sid}{FEATURE} }) {
-         next if ($f->primary_tag eq 'CDS' and not $f->has_tag('product')); 
-         # Add a GFF "Name" tag if we have /gene (better than "ID" /locus_tag)
-         
-         if (my $name = TAG($f, 'gene')) {
-            $f->add_tag_value('Name', $name);
-         }
-         # Make sure we have valid frames/phases (GFF column 8)
-         $f->frame( $f->primary_tag eq 'CDS' ? 0 : '.' );
+      for my $f ( sort { $a->start <=> $b->start } @{ $seq{$sid}{FEATURE} }) {   
+         next if ($f->primary_tag eq 'CDS' and not $f->has_tag('product'));
+
+            # Add a GFF "Name" tag if we have /gene (better than "ID" /locus_tag)        
+            if (my $name = TAG($f, 'gene')) {
+               $f->add_tag_value('Name', $name);
+            }
+            # Make sure we have valid frames/phases (GFF column 8)
+            $f->frame( $f->primary_tag eq 'CDS' ? 0 : '.' );
     
-         print {$gff_fh} $f->gff_string($gff_factory),"\n";
-         my ($L,$R) = ($f->strand >= 0) ? ($f->start,$f->end) : ($f->end,$f->start);
+            print {$gff_fh} $f->gff_string($gff_factory),"\n";
+            my ($L,$R) = ($f->strand >= 0) ? ($f->start,$f->end) : ($f->end,$f->start);
 
 #start van de contig =1
 #einde van de contig =$eindecontig
@@ -1633,28 +1851,29 @@ if ($compliant) {
 # als start van het eiwit geen startcodon is, dan <
 # als einde van het eiwit geen stopcodon is, dan >
 
-         #add > or < to partial translations for gbk file and subsequent submission
-         # mark partial genes on the ends of the contigs
+            #add > or < to partial translations for gbk file and subsequent submission
+            # mark partial genes on the ends of the contigs
 
-         if (($L <= 3 or $L >= $seq{$sid}{DNA}->length - 2) and ($R >= $seq{$sid}{DNA}->length - 2 or $R <= 3)) { print {$tabel_fh} "<$L\t>$R\t",$f->primary_tag,"\n";}
+            if (($L <= 3 or $L >= $seq{$sid}{DNA}->length - 2) and ($R >= $seq{$sid}{DNA}->length - 2 or $R <= 3)) { print {$tabel_fh} "<$L\t>$R\t",$f->primary_tag,"\n";}
 
-         if ($L <= 3 or $L >= $seq{$sid}{DNA}->length - 2) { print {$tabel_fh} "<$L\t$R\t",$f->primary_tag,"\n";
-         }
-         elsif ($R >= $seq{$sid}{DNA}->length - 2 or $R <= 3)  { print {$tabel_fh} "$L\t>$R\t",$f->primary_tag,"\n";}
-         else { print {$tabel_fh} "$L\t$R\t",$f->primary_tag,"\n"; 
-         } 
-
-         for my $tag ($f->get_all_tags) {
-            next if $tag =~ m/^[A-Z]/ and $tag !~ m/EC_number/i ; # remove GFF specific tags (start with uppercase letter)
-            for my $value ($f->get_tag_values($tag)) {
-               unless ($tag eq 'part' or $tag eq 'method' or $tag eq 'phage' or $tag eq 'cycle' or $tag eq 'key' or $tag eq 'eva' or $tag eq 'score'){  
-                  print {$tabel_fh} "\t\t\t$tag\t$value\n";
-              }
+            if ($L <= 3 or $L >= $seq{$sid}{DNA}->length - 2) { print {$tabel_fh} "<$L\t$R\t",$f->primary_tag,"\n";
             }
-         }
+            elsif ($R >= $seq{$sid}{DNA}->length - 2 or $R <= 3)  { print {$tabel_fh} "$L\t>$R\t",$f->primary_tag,"\n";}
+            else { print {$tabel_fh} "$L\t$R\t",$f->primary_tag,"\n"; 
+            } 
+  
+            for my $tag ($f->get_all_tags) {
+               next if $tag =~ m/^[A-Z]/ and $tag !~ m/EC_number/i ; # remove GFF specific tags (start with uppercase letter)
+               for my $value ($f->get_tag_values($tag)) {
+                  unless ($tag eq 'part' or $tag eq 'method' or $tag eq 'phage' or $tag eq 'cycle' or $tag eq 'key' or $tag eq 'eva' or $tag eq 'score'){  
+                     print {$tabel_fh} "\t\t\t$tag\t$value\n";
+                  }
+               }
+            }
+         
          #overview file
          if ($f->primary_tag eq 'CDS') {
-            my $contig = $f ->{'_gsf_seq'}->{'primary_id'};
+            my $contig = $f->{'_gsf_seq'}->{'primary_id'};
             my $qname = $f->{'_gsf_tag_hash'}->{'key'}->[0]; #not from blast
             my $score = $f->{'_gsf_tag_hash'}->{'score'}->[0];#not from blast
             my $eva = $f->{'_gsf_tag_hash'}->{'eva'}->[0]; #not from blast
@@ -1664,7 +1883,8 @@ if ($compliant) {
             my $acc = $f->{'_gsf_tag_hash'}->{'KO'}->[0]; #not from blast
             my $prod= $f->{'_gsf_tag_hash'}->{'product'}->[0];
             my $locus = $f->{'_gsf_tag_hash'}->{'ID'}->[0];
-            my $phagebinary = $f -> {'_gsf_tag_hash'}->{'phage'}->[0];
+            my $phage_binary = $f -> {'_gsf_tag_hash'}->{'phage'}->[0];
+            
             my $vq= $f -> {'_gsf_tag_hash'}->{'VQ'}->[0];
                $locusVQ{$locus}{'START'} =$f->start;
                $locusVQ{$locus}{'END'} =$f->end;
@@ -1676,10 +1896,17 @@ if ($compliant) {
                $locusVQ{$locus}{'VQ'} = '0';
                $locusVQ{$locus}{'PROD'} = '';
             }
-            $locus01{$bin}{$contig}{$locus} = $phagebinary;
+            $locus01{$bin}{$contig}{$locus} = $phage_binary;
             if ($f->{'_gsf_tag_hash'}->{'method'}->[0] eq 'hmmer') {
                print {$hmm_tot_fh} "$in\t$locus\t$contig\t$qname\t$score\t$eva\t$cycle\t$locustag\t$gene\t$EC\t$acc\t$prod\n";
             }
+            if ($aaonly){
+               my $oldprimId = $f->{'_gsf_seq'}->{'primary_id'};
+               my $newprimID = $f->{'_gsf_tag_hash'}->{'ID'}->[0];
+               my $olddesc = $f->{'_gsf_seq'}->{'primary_seq'}->{'desc'};
+               my $newdesc = $prod;
+               print {$aaonly_tsv_fh} "$oldprimId\t$newprimID\t$olddesc\t$newdesc\n";
+         }          
             if (defined $acc) {$locacc{$locus}=$acc;}
          }
          #Kegg file
@@ -1700,42 +1927,56 @@ if ($compliant) {
          $p->display_id( TAG($f, 'locus_tag') );
          $p->desc( TAG($f, 'product') ) if $f->has_tag('product');
 
-         if ($f->primary_tag eq 'CDS' and $f->{'_gsf_tag_hash'}->{'method'}->[0] !~ m/non|blast/) {
-            $faa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) ); 
-            if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'hydro' ){
-               $hydrofaa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) );
+         if ($aaonly){
+            if ($f->primary_tag eq 'CDS' and $f->{'_gsf_tag_hash'}->{'method'}->[0] !~ m/non|blast/) {
+               $faa_fh->write_seq($p);
             }
-            if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'phage' ){
-               $phagefaa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) );
-            } 
+            if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'hydro' ){
+               $hydrofaa_fh->write_seq($p);
+            }
+            if ($f->{'_gsf_tag_hash'}->{'phagebinary'}->[0] eq 'phage' ){
+               $phagefaa_fh->write_seq($p);
+            }
          }
 
-         if ($f->primary_tag eq 'CDS') {
-            $faaALL_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) ); 
-         }
+         unless ($aaonly){
+            if ($f->primary_tag eq 'CDS' and $f->{'_gsf_tag_hash'}->{'method'}->[0] !~ m/non|blast/) {
+               $faa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) ); 
+               if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'hydro' ){
+                  $hydrofaa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) );
+               }
+               if ($f->{'_gsf_tag_hash'}->{'phagebinary'}->[0] eq 'phage' ){
+                  $phagefaa_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) );
+               } 
+            }
 
-         if ($f->primary_tag =~ m/^(rRNA)$/) {
-            $f16_fh->write_seq($p);
-         }
+            if ($f->primary_tag eq 'CDS') {
+               $faaALL_fh->write_seq($p->translate(-codontable_id=>$gcode, -complete=>0) ); 
+            }
 
-         if ($f->primary_tag eq 'CDS' and $f->{'_gsf_tag_hash'}->{'method'}->[0] !~ m/non|blast/) {
-            $ffn_fh->write_seq($p); 
+            if ($f->primary_tag =~ m/^(rRNA)$/) {
+               $f16_fh->write_seq($p);
+            }
+
+            if ($f->primary_tag eq 'CDS' and $f->{'_gsf_tag_hash'}->{'method'}->[0] !~ m/non|blast/) {
+               $ffn_fh->write_seq($p); 
                if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'hydro' ){
                   $hydroffn_fh->write_seq($p); 
                }                     
                if ($f->{'_gsf_tag_hash'}->{'KO'}->[0] eq 'phage' ){
                   $phageffn_fh->write_seq($p); 
                }   
-         }
+            }
 
-         if ($f->primary_tag eq 'CDS') {
-            $ffnALL_fh->write_seq($p); 
-         }
+            if ($f->primary_tag eq 'CDS') {
+               $ffnALL_fh->write_seq($p); 
+            }
 
-         if ($f->primary_tag eq 'CDS' or $f->primary_tag =~ m/^(rRNA)$/) {
-            $f16fn_fh->write_seq($p); 
+            if ($f->primary_tag eq 'CDS' or $f->primary_tag =~ m/^(rRNA)$/) {
+               $f16fn_fh->write_seq($p); 
+            }
          }
-      }
+      }   
    } 
 
    if (@seq) {
@@ -1774,15 +2015,15 @@ if ($compliant) {
                map_sub($bin);
             }
             closedir(MAPPING);
-            if (glob("$dir/$outdir/map/$prefix.*.sorted.bam.bai")) {
+            if (glob("$dir/$outdir2/map/$prefix.*.sorted.bam.bai")) {
                my @checkm_tot;
                my $num_con=0;
                my $loopcount=0;
                foreach (@fastq) {
                   $loopcount ++;
-                  runcmd("checkm coverage -x $x --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir/map/  $dir/$outdir/map/$prefix.$_.checkm_cov.tsv $dir/$outdir/map/$prefix.$_.sorted.bam");          
-                  delfile("$dir/$outdir/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir/map/$prefix.$_.sorted.bam");
-                  open(CHECKM, "<$dir/$outdir/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
+                  runcmd("checkm coverage -x $x --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir2/map/  $dir/$outdir2/map/$prefix.$_.checkm_cov.tsv $dir/$outdir2/map/$prefix.$_.sorted.bam");          
+                  delfile("$dir/$outdir2/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir2/map/$prefix.$_.sorted.bam");
+                  open(CHECKM, "<$dir/$outdir2/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
                   while (<CHECKM>)  {
                      next if $. == 1;
                      my @checkm_cov= split (/\t/, "$_");
@@ -1804,19 +2045,19 @@ if ($compliant) {
          else {
             opendir (MAPPING, $mapping) or die "Could not open '$mapping' for reading '$!'\n";
             my @fastq = grep {$_ =~ /fastq/i or $_ =~/fq/i} readdir (MAPPING);
-            system("cp $dir/$outdir/$prefix.hmm.ffn $dir/");
+            system("cp $dir/$outdir2/$prefix.hmm.ffn $dir/");
             foreach (@fastq) {
                msg("Mapping Fastq reads to genes");
                map_sub("$dir/$prefix.hmm.ffn");
             }
             closedir(MAPPING);
-            if (glob("$dir/$outdir/map/$prefix.*.sorted.bam.bai")) {
+            if (glob("$dir/$outdir2/map/$prefix.*.sorted.bam.bai")) {
                my @checkm_tot;
                foreach (@fastq) {
-                  runcmd("checkm coverage -x ffn --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir/map/  $dir/$outdir/map/$prefix.$_.checkm_cov.tsv $dir/$outdir/map/$prefix.$_.sorted.bam");          
-                  delfile("$dir/$outdir/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir/map/$prefix.$_.sorted.bam");
+                  runcmd("checkm coverage -x ffn --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir2/map/  $dir/$outdir2/map/$prefix.$_.checkm_cov.tsv $dir/$outdir2/map/$prefix.$_.sorted.bam");          
+                  delfile("$dir/$outdir2/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir2/map/$prefix.$_.sorted.bam");
                   my %checkm_cov;
-                  open(CHECKM, "<$dir/$outdir/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
+                  open(CHECKM, "<$dir/$outdir2/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
                   while (<CHECKM>)  {
                      chomp $_;
                      next if $. == 1;
@@ -1857,27 +2098,27 @@ if ($compliant) {
    if ($checkmqi){
       if (length( $depth // '' )) {msg("Checkm data already available");}
       else {
-         if (-s -d -e "$dir/$outdir/out/") {
-            msg("$dir/$outdir/out/ is not empty. Deleting contents from the folder");
-            remove_tree("$dir/$outdir/out/", {keep_root => 1});
-            msg("Removed contents from $dir/$outdir/out/");
+         if (-s -d -e "$dir/$outdir2/out/") {
+            msg("$dir/$outdir2/out/ is not empty. Deleting contents from the folder");
+            remove_tree("$dir/$outdir2/out/", {keep_root => 1});
+            msg("Removed contents from $dir/$outdir2/out/");
          }
          # Place bins in the reference genome tree
          system('source activate checkm');
-         runcmd("checkm tree -x fsa -q -t $cpus --pplacer_threads $cpus  $dir/$outdir/ $dir/$outdir/out/");
+         runcmd("checkm tree -x fsa -q -t $cpus --pplacer_threads $cpus  $dir/$outdir2/ $dir/$outdir2/out/");
          # Assess phylogenetic markers found in each bin
-         runcmd("checkm tree_qa -o 2 --tab_table -q $dir/$outdir/out/ > $dir/$outdir/out/$prefix.phylo_markers.tsv");
+         runcmd("checkm tree_qa -o 2 --tab_table -q $dir/$outdir2/out/ > $dir/$outdir2/out/$prefix.phylo_markers.tsv");
          # Infer lineage-specific marker sets for each bin
-         runcmd("checkm lineage_set -q $dir/$outdir/out/ $dir/$outdir/out/markers.mf");
+         runcmd("checkm lineage_set -q $dir/$outdir2/out/ $dir/$outdir2/out/markers.mf");
          # Identify marker genes in bins
-         runcmd("checkm analyze -q -t $cpus $dir/$outdir/out/markers.mf -x fsa $dir/$outdir/ $dir/$outdir/out/");
+         runcmd("checkm analyze -q -t $cpus $dir/$outdir2/out/markers.mf -x fsa $dir/$outdir2/ $dir/$outdir2/out/");
          # Assess bins for contamination and completeness
-         runcmd("checkm qa -o 2 -t $cpus -q --tab_table  $dir/$outdir/out/markers.mf $dir/$outdir/out/ > $dir/$outdir/out/$prefix.quality.tsv");
+         runcmd("checkm qa -o 2 -t $cpus -q --tab_table  $dir/$outdir2/out/markers.mf $dir/$outdir2/out/ > $dir/$outdir2/out/$prefix.quality.tsv");
          # Bar plot of bin completeness, contamination, and strain heterogeneity
-         runcmd("checkm bin_qa_plot --image_type pdf --dpi 300 -q -x fsa $dir/$outdir/out/ $dir/$outdir/ $dir/$outdir/");
-         runcmd("mv $dir/$outdir/bin_qa_plot.pdf $dir/$outdir/$prefix.bin_qa_plot.pdf");
+         runcmd("checkm bin_qa_plot --image_type pdf --dpi 300 -q -x fsa $dir/$outdir2/out/ $dir/$outdir2/ $dir/$outdir2/");
+         runcmd("mv $dir/$outdir2/bin_qa_plot.pdf $dir/$outdir2/$prefix.bin_qa_plot.pdf");
          system('source deactivate');
-         open(PHYLO, "<$dir/$outdir/out/$prefix.phylo_markers.tsv") or die "Unable to open file\n";
+         open(PHYLO, "<$dir/$outdir2/out/$prefix.phylo_markers.tsv") or die "Unable to open file\n";
          while(<PHYLO>) {
              if(grep(/$prefix/, $_)) {
                 my @tsv_split = split /\t/, $_;
@@ -1887,7 +2128,7 @@ if ($compliant) {
          close(PHYLO);
       } 
    }
-       # print Dumper \%seq;           
+     
    #..............................................................
    # 16S blast
    msg("BLAST-ing 16/5/28S");
@@ -1895,7 +2136,7 @@ if ($compliant) {
    my %blast16;
    my $header;
 
-   open (NAMES, "<$dir/$outdir/$prefix.f16") or die "can not open fasta";
+   open (NAMES, "<$dir/$outdir2/$prefix.f16") or die "can not open fasta";
    while (my $line = <NAMES>){
       chomp $line;
       $line =~ s/\r//;
@@ -1939,7 +2180,7 @@ if ($compliant) {
       printf $ovw_fh ("%-39s %-31s %-7s %-7s %-7s %-15s %-90s\n", "Query", "Sequence ID", "Length", "Bit", "\% Match", "Subject Name", "Subject Title");
       printf $tot_ribo_ovw_fh ("%-39s %-31s %-7s %-7s %-7s %-15s %-90s\n", "Query", "Sequence ID", "Length", "Bit", "\% Match", "Subject Name", "Subject Title");
 
-      my $bln_name = "$dir/$outdir/$outname.blastn";
+      my $bln_name = "$dir/$outdir2/$outname.blastn";
       my $temp=undef;
       for $header ( sort keys %blast16){
          print $ovw_fh "$header:\t";
@@ -1951,7 +2192,7 @@ if ($compliant) {
          undef $temp;
          runcmd("cat \Qtemp.txt\E | $cmd2 > \Q$bln_name\E");
              
-         open(FILE, "$dir/$outdir/$outname.blastn") or die "Error: no file found.";
+         open(FILE, "$dir/$outdir2/$outname.blastn") or die "Error: no file found.";
          my $output = do {local $/; <FILE> };
          print {$ovw_fh} "$output\n";
          print {$tot_ribo_ovw_fh} "$output\n";  
@@ -1961,12 +2202,12 @@ if ($compliant) {
       if ($depth or $checkmqi) {print $ovw_fh("\n$checkm_phyl\n");
          printf $tot_ribo_ovw_fh ("\nCheckm: $checkm_phyl\n");
       }
-      delfile("$dir/$outdir/$outname.blastn", 'temp.txt')
+      delfile("$dir/$outdir2/$outname.blastn", 'temp.txt')
    }
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Output a general .txt file with statistics about the annotation
    msg("Generating annotation statistics file");
-   open my $txtFh, '>', "$dir/$outdir/$prefix.txt";
+   open my $txtFh, '>', "$dir/$outdir2/$prefix.txt";
    select $txtFh;
    printf "contigs: %d\n", scalar(@seq); 
    printf "bases: %d\n", sum( map { $seq{$_}{DNA}->length } @seq );
@@ -1985,10 +2226,12 @@ if ($compliant) {
    #......................................................................
    # trying to parse the data into a neat hash
 
+ #  print Dumper \%VirQuot;
    msg("Generating overview files");
    # now we have to count the occurences of genes(key) in the hmm tab file
    my $count_cycle=0; #excluding kegg
    my $count_kegg=0; #including kegg
+   my $count_virus=0;
    print {$bins_fh} "$bin\t$depth_value\n";
    $total_odsum += $depth_value;
    foreach my $cyc (sort keys %datastructure){ 
@@ -1996,25 +2239,44 @@ if ($compliant) {
       foreach my $ko (sort keys %{ $datastructure {$cyc} }) { #pmo/amoA is used here twice in the count. methane and nitrogen
          my $ocount=0;
          my $count=0;         
-         open my $names_fh, '<', "$dir/$outdir/$prefix.total.uniq.tbl";
+         open my $names_fh, '<', "$dir/$outdir2/$prefix.total.uniq.tbl";
          while (my $line = <$names_fh>) {
             chomp $line;
-            if ($line =~ m/KO\:$ko\b/) {
-               $count++;
-               $ocount=1;
-               $count_kegg++; #one bin
-               $total_keggsum++; #all bins
-               unless ($selector =~ 'meta.nonkey'){
-                  $count_cycle++; #one bin
-                  $total_gsum++; #all bins
+            if ($phages or $phagesonly){
+               if ($line =~ m/KO\:$ko/ and $line =~ m/KO\:VOG/) {
+                   if (defined $VirQuot{$ko} and $VirQuot{$ko} == 0){
+                     $big_hash{$bin}{$cyc}{$ko}->{vq} = '3';
+                        $count++;
+                        $ocount=1;
+                        $count_virus++;
+                        $total_virussum++;
+                    #    $count_kegg++; #one bin
+                    #    $total_keggsum++; #all bins
+                    #    unless ($selector =~ 'meta.nonkey'){
+                    #       $count_cycle++; #one bin
+                    #       $total_gsum++; #all bins
+                    #    }
+                    }
+                }              
+            }             
+            unless ($phagesonly){
+               if ($line =~ m/KO\:$ko\b/ and not $line =~ m/KO\:VOG/) {
+                  $count++;
+                  $ocount=1;
+                  $count_kegg++; #one bin
+                  $total_keggsum++; #all bins
+                  unless ($selector =~ 'meta.nonkey'){
+                     $count_cycle++; #one bin
+                     $total_gsum++; #all bins
+                  }
                }
-            }      
+            }
          }
          $big_hash{$bin}{$cyc}{$ko}->{gene} = $count;
          $big_hash{$bin}{$cyc}{$ko}->{organism}= $ocount;
          $big_hash{$bin}{$cyc}{$ko}->{depth}= $depth_value;
 
-         my @ko = $ko=~ m/K\d+|hydro\w+|UNKNOWN\d+/g;
+         my @ko = $ko=~ m/K\d+|hydro\w+|UNKNOWN\d+|VOG\d+/g;
          my @kodesc;
          foreach my $i(@ko){
              push @kodesc, $keg{$i};
@@ -2039,8 +2301,9 @@ if ($compliant) {
       }
    }
    #printing out the data
-
+#   print Dumper \%big_hash;
    print $ovw_fh ("\nMetabolic potential\n");
+   if ($phages or $phagesonly) {print {$ovw_fh} "Total number of virus specific genes: $count_virus\n\n";}   
    if ($count_cycle == 0) {print {$ovw_fh} "No key genes found\n";}
    else {print {$ovw_fh} "Total number of key genes: $count_cycle\n";}
    if ($count_kegg == 0) {print {$ovw_fh} "No metabolic genes found\n";}
@@ -2063,6 +2326,11 @@ if ($compliant) {
             my $perc;
             if ($count_cycle >= 1) {
                $perc = ($big_hash{$bin}{$cyc}{$ko}{'gene'}/$count_cycle*100); #hydro
+               if ($phages or $phagesonly){ 
+                  if ($cyc =~ m/VOG/){
+                      $perc= '0';
+                  }
+               }
             }
             else {$perc=0;}
             if ($nozero) {
@@ -2091,37 +2359,39 @@ if ($compliant) {
    # SO: *sigh*
 
     # tbl2asn should not be used for unbinned or small co1ntigs. This takes up to days to do this task and it is not nesecairy as noone is going to submit that data to genbank anyway. Therefor tbl2asn is limited to 15 MB as this is the current maximum size of a bacterial genome plus a bit. Files bigger than this will logically be either unbinnned or small deleted fragments.
-
+unless ($aaonly){
    unless ($total_bp >= 15000000){
       #my $table2asn_opt = @seq > 10_000 ? '-M b' : '-M n';  # Issue 93 - big assemblies
 
       msg("Generating Genbank and Sequin files");
       
       runcmd(
-        "table2asn -V b -a s -verbose -U -N 1 -c befw -W -locus-tag-prefix $locustag -i \Q$dir/$outdir/$prefix.fsa\E ");
+        "table2asn -V b -a s -verbose -U -N 1 -c befw -W -locus-tag-prefix $locustag -i \Q$dir/$outdir2/$prefix.fsa\E ");
 
      # runcmd(
      # "tbl2asn -V b -a r10k -l paired-ends $tbl2asn_opt -N 1 -y 'Annotated using $EXE $VERSION from $URL'".
-     # " -Z \Q$dir/$outdir/$prefix.err\E -i \Q$dir/$outdir/$prefix.fsa\E 2> /dev/null"
+     # " -Z \Q$dir/$outdir2/$prefix.err\E -i \Q$dir/$outdir2/$prefix.fsa\E 2> /dev/null"
      # );
-      delfile("$dir/$outdir/errorsummary.val");
-      delfile( map { "$dir/$outdir/$prefix.$_" } qw(dr fixedproducts ecn val) );
+      delfile("$dir/$outdir2/errorsummary.val");
+      delfile( map { "$dir/$outdir2/$prefix.$_" } qw(dr fixedproducts ecn val) );
 
-      msg("Repairing broken .GBK output that tbl2asn produces...");
-      runcmd("sed 's/COORDINATES: profile/COORDINATES:profile/' < \Q$dir/$outdir/$prefix.gbf\E > \Q$dir/$outdir/$prefix.gbk\E");
-      delfile("$dir/$outdir/$prefix.gbf");
+      msg("Repairing broken .GBK output that table2asn produces...");
+      runcmd("sed 's/COORDINATES: profile/COORDINATES:profile/' < \Q$dir/$outdir2/$prefix.gbf\E > \Q$dir/$outdir2/$prefix.gbk\E");
+      delfile("$dir/$outdir2/$prefix.gbf");
    }
    if ($toobig == 0){
-      my $genbank  = Bio::SeqIO->newFh(-file => "$dir/$outdir/$prefix.gbk", -format => 'genbank' );
-      my $embl = Bio::SeqIO->newFh(-file => ">$dir/$outdir/$prefix.embl", -format => 'EMBL' );
+      my $genbank  = Bio::SeqIO->newFh(-file => "$dir/$outdir2/$prefix.gbk", -format => 'genbank' );
+      my $embl = Bio::SeqIO->newFh(-file => ">$dir/$outdir2/$prefix.embl", -format => 'EMBL' );
       #note: you might want to quote -format to keep older perl's from complaining.
       #when you get a BAD LOCUS message error , the contig name is too long. Use --compliant
       print $embl $_ while <$genbank>;
    }
-   msg("when you get a BAD LOCUS message error , the contig name is too long. Use --compliant");
+}   
+   
+   msg("when you get a BAD LOCUS message error , the contig name is too long. Use --shortid");
    # Some final log output
    msg("Output files:");
-   foreach (qx(find \Q$dir/$outdir\E -type f -name "$prefix.*")) {
+   foreach (qx(find \Q$dir/$outdir2\E -type f -name "$prefix.*")) {
       chomp;
       msg($_);
    }
@@ -2135,8 +2405,15 @@ if ($compliant) {
    msg("This script is based on: Seemann T (2014) Prokka: rapid prokaryotic genome annotation. Bioinformatics. 30(14):2068-9.");
    msg("Type 'prokka --citation' for more details.");
    msg("************************************");
+   
+  #remove files when annotatoting existing gene calling
+  if($aaonly){
+     delfile ("$dir/*.hmmer", "$dir/$outdir2/$prefix.*.hmm.tbl", "$dir/$outdir2/$prefix.all.faa", "$dir/$outdir2/$prefix.all.ffn", "$dir/$outdir2/$prefix.f16","$dir/$outdir2/$prefix.fall", 
+     "$dir/$outdir2/$prefix.fsa","$dir/$outdir2/$prefix.gff", "$dir/$outdir2/$prefix.hmm.ffn", "$dir/$outdir2/$prefix.total.sort.tbl", "$dir/$outdir2/$prefix.total.tbl", 
+     "$dir/$outdir2/$prefix.total.uniq.tbl", "$dir/$outdir2/$prefix.txt", "$dir/$outdir2/$prefix.faa")
+   };
   
-   undef $outdir;
+   undef $outdir2;
    undef $prefix;
    undef $locustag;
    undef %seq;
@@ -2252,7 +2529,7 @@ if ($compliant) {
       $quiet=0;
       msg(@_);
       msg("************************************");
-      undef $outdir;
+      undef $outdir2;
       undef $prefix;
       undef $locustag;
       undef %seq;
@@ -2405,7 +2682,7 @@ EOCITE
       use Getopt::Long;
 
       @Options = (
-        "\n Warning, when using the 'centre' option, it NEEDS input on the command line. Metascan will run without one, but it will then not do what you expect it to do.\n And since Metascan can run quite a while it would be an unfortunate waste of time and effort to find out it ignored the next option on the command line.\n This goes for every entry needing a string [X] input, but for centre it may not always be obvious it needs one",
+        "",
         "\nGeneral:",
         {OPT=>"help",           VAR=>\&usage,                              DESC=>"This help"},
         {OPT=>"version",        VAR=>\&version,                            DESC=>"Print version and exit"},
@@ -2413,6 +2690,8 @@ EOCITE
         {OPT=>"quiet!",         VAR=>\$quiet,         DEFAULT=>0,          DESC=>"No screen output"},
         {OPT=>"debug!",         VAR=>\$debug,         DEFAULT=>0,          DESC=>"Debug mode: keep all temporary files"},
         {OPT=>"restore!",       VAR=>\$restore,       DEFAULT=>0,          DESC=>"Restore data and restart from breaking point"},
+        {OPT=>"tmpdir=s",       VAR=>\$tmpdir,        DEFAULT=>'/scratch', DESC=>"Set temporary directory for analysis"},
+        {OPT=>"shortid!",       VAR=>\$shortid,       DEFAULT=>0,          DESC=>"Shorten contig ID's if they are too long"},
        
         "\nSetup:",
         {OPT=>"listdb",         VAR=>\&list_db,                            DESC=>"List all configured databases"},
@@ -2422,11 +2701,9 @@ EOCITE
         {OPT=>"depends",        VAR=>\&list_depends,                       DESC=>"List all software dependencies"},
 #        {OPT=>"dbloc=s",        VAR=>\$databasedir,   DEFAULT=>'',       DESC=>"Path to databases"},
         
-
         "\nOutputs:",
-        #{OPT=>"outdir=s",      VAR=>\$outdir,        DEFAULT=>'',         DESC=>"Output folder [auto]"},
         {OPT=>"force!",         VAR=>\$force,         DEFAULT=>0,          DESC=>"Force overwriting existing output folder"},
-        {OPT=>"prefix=s",       VAR=>\$prefix,        DEFAULT=>'',         DESC=>"Filename output prefix [auto]"},
+        {OPT=>"prefix=s",       VAR=>\$prefix,        DEFAULT=>'',         DESC=>"Filename output prefix [auto] Not to be used with multi bin analysis"},
         {OPT=>"locustag=s",     VAR=>\$locustag,      DEFAULT=>'',         DESC=>"Locus tag prefix [auto]"},
         {OPT=>"increment=i",    VAR=>\$increment,     DEFAULT=>1,          DESC=>"Locus tag counter increment"},
         {OPT=>"gffver=i",       VAR=>\$gffver,        DEFAULT=>3,          DESC=>"GFF version"},
@@ -2435,10 +2712,15 @@ EOCITE
         {OPT=>"centre=s",       VAR=>\$centre,        DEFAULT=>'',         DESC=>"Sequencing centre ID. !When using this, always enter a value/string!"},
         {OPT=>"nozero!",        VAR=>\$nozero,        DEFAULT=>0,          DESC=>"Do not list negative hits in output"},
         {OPT=>"nosort!",        VAR=>\$nolengthsort,  DEFAULT=>0,          DESC=>"Do not sort contigs according to length"},
-
+        {OPT=>"outdir=s",       VAR=>\$dir,           DEFAULT=>'metascan_out',         DESC=>"Output folder [auto]"},            
+        
+        "\nProteins Annotation Only:", 
+  #      {OPT=>"outdir2=s",       VAR=>\$outdir2,        DEFAULT=>'',         DESC=>"Output folder [auto] Not to be used with metagenomic analysis"},
+        {OPT=>"aaonly!",       VAR=>\$aaonly,        DEFAULT=>'',         DESC=>"Run an FAA file, without metagenome analysis; Provide .faa file"},        
+                
         "\nAnnotations:",
         {OPT=>"kingdom=s",      VAR=>\$kingdom,       DEFAULT=>'Bacteria', DESC=>"rRNA mode: Bacteria Archaea" },
-        {OPT=>"gcode=i",        VAR=>\$gcode,         DEFAULT=>0,          DESC=>"Genetic code / Translation table (set if --kingdom is set)"},
+        {OPT=>"gcode=i",        VAR=>\$gcode,         DEFAULT=>11,         DESC=>"Genetic code / Translation table (set if --kingdom is set)"},
         {OPT=>"rawproduct!",    VAR=>\$rawproduct,    DEFAULT=>0,          DESC=>"Do not clean up /product annotation"},
         {OPT=>"norrna!",        VAR=>\$norrna,        DEFAULT=>0,          DESC=>"Don't run rRNA search"},
 #        {OPT=>"gram=s",         VAR=>\$gram,          DEFAULT=>'',         DESC=>"Gram: -/neg +/pos"},
@@ -2446,7 +2728,6 @@ EOCITE
         "\nComputation:",
         {OPT=>"cpus=i",         VAR=>\$cpus,          DEFAULT=>8,          DESC=>"Number of CPUs to use [0=all]"},
         {OPT=>"mincontiglen=i", VAR=>\$mincontiglen,  DEFAULT=>1,          DESC=>"Minimum contig size [NCBI needs 200]"},
-#        {OPT=>"rnammer!",       VAR=>\$rnammer,       DEFAULT=>0,          DESC=>"Prefer RNAmmer over Barrnap for rRNA prediction"},
         #{OPT=>"stringent=s",   VAR=>\$stringent,     DEFAULT=>'cut_nc',   DESC=>"Set stringent to [x]=evalue (use with --evalue)"},
         {OPT=>"evalue=f",       VAR=>\$eval,          DEFAULT=>1E-06,      DESC=>"Similarity e-value cut-off for RNA and small proteins"},
         {OPT=>"e-kegg=f",       VAR=>\$ekegg,         DEFAULT=>1E-50,      DESC=>"E-value cut-off for big proteins with the use of the Kegg database"},
@@ -2454,7 +2735,7 @@ EOCITE
         {OPT=>"e-partial=f",    VAR=>\$part_eval_out, DEFAULT=>1E-80,      DESC=>"E-value cut-off for partials genes"},
         {OPT=>"size=f",         VAR=>\$sizeperc,      DEFAULT=>20,         DESC=>"Size range Query-Target length; 20 => 80-120%"},
         {OPT=>"size-part=f",    VAR=>\$sizepercpart,  DEFAULT=>30,         DESC=>"Size range Query-Target length for partial genes; 30 => 70-130%"},
-        {OPT=>"smalltrgt=f",    VAR=>\$smalltrgt,     DEFAULT=>200,        DESC=>"Max value for a target sequence to be considered a small protein. Lower is more stringent"},
+        {OPT=>"smalltrgt=f",    VAR=>\$smalltrgt,     DEFAULT=>130,        DESC=>"Max value for a target sequence to be considered a small protein. Lower is more stringent"},
         {OPT=>"windowsize=f",   VAR=>\$windowsize,    DEFAULT=>5,          DESC=>"Windowsize for Phage 'operon' computation, Odd numbers only"},
         {OPT=>"phagethresh=f",  VAR=>\$minsum,        DEFAULT=>1,          DESC=>"Minimum total sum of averages for reporting phage stretches "},
   
@@ -2468,8 +2749,7 @@ EOCITE
         {OPT=>"phages-only!",   VAR=>\$phagesonly,    DEFAULT=>0,          DESC=>"Use only phages for Annotation and analysis"},
         {OPT=>"hmms=s",         VAR=>\$hmms,          DEFAULT=>'',         DESC=>"User supplied HMM to annotate from"},
         {OPT=>"bothhmms=s",     VAR=>\$bothhmms,      DEFAULT=>'',         DESC=>"Both User supplied and metabolic HMM to annotate from"},
-        {OPT=>"nokegg!",        VAR=>\$nokegg,        DEFAULT=>0,          DESC=>"Don't run Kegg database for KEGG"},
-#        {OPT=>"nt!",            VAR=>\$nt,            DEFAULT=>0,          DESC=>"Run nt databse for 16S BLAST"},        
+        {OPT=>"nokegg!",        VAR=>\$nokegg,        DEFAULT=>0,          DESC=>"Don't run Kegg database for KEGG"},     
 
         "\nProkka annotation options",
         {OPT=>"prokka!",        VAR=>\$prokka,        DEFAULT=>'',         DESC=>"Use all prokka options"},
@@ -2492,9 +2772,14 @@ EOCITE
 
    sub usage {
       print STDERR 
-      "Name:\n  ", ucfirst($EXE), " $VERSION by $AUTHOR\n",
-      "Synopsis:\n  rapid prokarotic gene identification\n",
-      "Usage:\n  $EXE <dir> . [options] \n";
+      "         _      _____ _____  ____  ____  ____  ____  _     
+        / \\__/|/  __//__ __\\/  _ \\/ ___\\/   _\\/  _ \\/ \\  /|
+        | |\\/|||  \\    / \\  | / \\||    \\|  /  | / \\|| |\\ ||
+        | |  |||  /_   | |  | |-||\\___ ||  \\_ | |-||| | \\||
+        \\_/  \\|\\____\\  \\_/  \\_/ \\|\\____/\\____/\\_/ \\|\\_/  \\|\n
+        ",ucfirst($EXE), " $VERSION by $AUTHOR\n\n",
+      "Synopsis:\n  rapid prokarotic metabolic gene identification\n",
+      "Usage:\n  $EXE <dir> [options]";
       foreach (@Options) {
          if (ref) {
             my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
@@ -2504,7 +2789,7 @@ EOCITE
             $opt =~ s/=s$/ [X]/; 
             $opt =~ s/=i$/ [N]/;
             $opt =~ s/=f$/ [n.n]/;
-            printf STDERR "  --%-15s %s%s\n", $opt, $_->{DESC}, $def;
+            printf STDERR "  --%-20s %s%s\n", $opt, $_->{DESC}, $def;
          }
          else {
             print STDERR "$_\n";
@@ -2515,18 +2800,18 @@ EOCITE
    #-------------------------------------------------------------------------
    # Mapping subroutine $bin #-k 49 -B 10 -O 7 -E 6 -w 2 -T 50
    sub map_sub {
-      if (! -d "$dir/$outdir/map" or ! -e "$dir/$outdir/map/@_"){
-         runcmd("mkdir -p $dir/$outdir/map/ && cp $dir/@_ $dir/$outdir/map/");
+      if (! -d "$dir/$outdir2/map" or ! -e "$dir/$outdir2/map/@_"){
+         runcmd("mkdir -p $dir/$outdir2/map/ && cp $dir/@_ $dir/$outdir2/map/");
       }
-      if (! -e "$dir/$outdir/map/@_.amb"){
-         runcmd("bwa index $dir/$outdir/map/@_");
+      if (! -e "$dir/$outdir2/map/@_.amb"){
+         runcmd("bwa index $dir/$outdir2/map/@_");
       }
-      if (-s "$dir/$outdir/map/@_"){ 
-         runcmd("bwa mem -M -t $cpus  $dir/$outdir/map/@_ $mapping/$_ > $dir/$outdir/map/$prefix.$_.sam");
-         runcmd("samtools view -@ $cpus -h -bt $dir/$outdir/map/@_ -o $dir/$outdir/map/$prefix.$_.unsorted.bam $dir/$outdir/map/$prefix.$_.sam");
-         runcmd("samtools sort -@ $cpus $dir/$outdir/map/$prefix.$_.unsorted.bam -o $dir/$outdir/map/$prefix.$_.sorted.bam");
-         runcmd("samtools index -b -@ $cpus $dir/$outdir/map/$prefix.$_.sorted.bam");
-         delfile ("$dir/$outdir/map/$prefix.$_.unsorted.bam", "$dir/$outdir/map/$prefix.$_.sam")
+      if (-s "$dir/$outdir2/map/@_"){ 
+         runcmd("bwa mem -M -t $cpus  $dir/$outdir2/map/@_ $mapping/$_ > $dir/$outdir2/map/$prefix.$_.sam");
+         runcmd("samtools view -@ $cpus -h -bt $dir/$outdir2/map/@_ -o $dir/$outdir2/map/$prefix.$_.unsorted.bam $dir/$outdir2/map/$prefix.$_.sam");
+         runcmd("samtools sort -@ $cpus $dir/$outdir2/map/$prefix.$_.unsorted.bam -o $dir/$outdir2/map/$prefix.$_.sorted.bam");
+         runcmd("samtools index -b -@ $cpus $dir/$outdir2/map/$prefix.$_.sorted.bam");
+         delfile ("$dir/$outdir2/map/$prefix.$_.unsorted.bam", "$dir/$outdir2/map/$prefix.$_.sam")
       }
    }
    #store hash and data in a file:
@@ -2557,7 +2842,7 @@ EOCITE
 
 } 
 
-closedir (DH); #END MAINLOOP
+ #END MAINLOOP
 close $fastanal_fh;
 #----------------------------------------------------------------------
 
@@ -2650,7 +2935,8 @@ my %ko_results;
 
 for my $bin (keys %big_hash) {
    for my $cyc (keys %{$big_hash{ $bin }}) {
-      for my $ko(keys %{$big_hash{ $bin }{ $cyc }} ) {
+      unless ($cyc =~ m/VOG/){
+         for my $ko(keys %{$big_hash{ $bin }{ $cyc }} ) {
          $ovw_results{$cyc}{$ko}->{description}= $big_hash{ $bin }{ $cyc }{ $ko }{'description'};
          $ko_results{$ko}->{description}= $big_hash{ $bin }{ $cyc }{ $ko }{'description'};
 #---------------------------------------------------------------#
@@ -2661,7 +2947,7 @@ for my $bin (keys %big_hash) {
             $ko_results{$ko}->{percg} = ($ovw_results{$cyc}{$ko}{'totg'}/$total_gsum*100);
          }
          else {$ovw_results{$cyc}{$ko}->{percg}='0';
-         $ko_results{$ko}->{percg}='0';}
+            $ko_results{$ko}->{percg}='0';}
 #---------------------------------------------------------------#
          $ovw_results{$cyc}{$ko}->{toto} += $big_hash{$bin}{$cyc}{$ko}{'organism'};
          $ko_results{$ko}->{toto} += $big_hash{$bin}{$cyc}{$ko}{'organism'};
@@ -2670,7 +2956,7 @@ for my $bin (keys %big_hash) {
             $ko_results{$ko}->{perco} =($ovw_results{$cyc}{$ko}{'toto'}/$total_osum*100);
          }
          else {$ovw_results{$cyc}{$ko}->{perco}='0';
-         $ko_results{$ko}->{perco}='0';}
+            $ko_results{$ko}->{perco}='0';}
 #---------------------------------------------------------------#
          $ovw_results{$cyc}{$ko}->{totod} += $big_hash{$bin}{$cyc}{$ko}{'orgdepth'};
          $ko_results{$ko}->{totod} += $big_hash{$bin}{$cyc}{$ko}{'orgdepth'};
@@ -2679,7 +2965,7 @@ for my $bin (keys %big_hash) {
             $ko_results{$ko}->{percod}=($ovw_results{$cyc}{$ko}{'totod'}/$total_odsum*100); #depth per organism
          }
          else {$ovw_results{$cyc}{$ko}->{percod}='0';
-         $ko_results{$ko}->{percod}='0';}
+            $ko_results{$ko}->{percod}='0';}
 #---------------------------------------------------------------#
          $ovw_results{$cyc}{$ko}->{totgd} += $big_hash{$bin}{$cyc}{$ko}{'gendepth'};
          $ko_results{$ko}->{totgd} += $big_hash{$bin}{$cyc}{$ko}{'gendepth'};
@@ -2688,11 +2974,37 @@ for my $bin (keys %big_hash) {
             $ko_results{$ko}->{percgd}=($ovw_results{$cyc}{$ko}{'totgd'}/$total_gdsum*100); #depth per gene
          }
          else {$ovw_results{$cyc}{$ko}->{percgd}='0';
-         $ko_results{$ko}->{percgd}='0';}
+            $ko_results{$ko}->{percgd}='0';}
+#---------------------------------------------------------------#
+         }
+      }
+      if ($cyc =~ m/VOG/){
+         for my $ko(keys %{$big_hash{ $bin }{ $cyc }} ) {
+            $ovw_results{$cyc}{$ko}->{description}= $big_hash{ $bin }{ $cyc }{ $ko }{'description'};
+            $ko_results{$ko}->{description}= $big_hash{ $bin }{ $cyc }{ $ko }{'description'};      
+            $ovw_results{$cyc}{$ko}->{totg} += $big_hash{$bin}{$cyc}{$ko}{'gene'};
+            $ko_results{$ko}->{totg} += $big_hash{$bin}{$cyc}{$ko}{'gene'};   
+            $ovw_results{$cyc}{$ko}->{toto} += $big_hash{$bin}{$cyc}{$ko}{'organism'};         
+            $ko_results{$ko}->{toto} += $big_hash{$bin}{$cyc}{$ko}{'organism'};                            
+            $ovw_results{$cyc}{$ko}->{vq}=$big_hash{ $bin }{ $cyc }{ $ko }{'VQ'};
+            $ovw_results{$cyc}{$ko}->{totod} += $big_hash{$bin}{$cyc}{$ko}{'orgdepth'};
+            $ko_results{$ko}->{totod} += $big_hash{$bin}{$cyc}{$ko}{'orgdepth'};            
+            $ovw_results{$cyc}{$ko}->{totgd} += $big_hash{$bin}{$cyc}{$ko}{'gendepth'};
+            $ko_results{$ko}->{totgd} += $big_hash{$bin}{$cyc}{$ko}{'gendepth'}; 
+            $ovw_results{$cyc}{$ko}->{percg} ='0';
+            $ko_results{$ko}->{percg} = '0';
+            $ovw_results{$cyc}{$ko}->{perco} = '0';
+            $ko_results{$ko}->{perco} = '0';
+            $ovw_results{$cyc}{$ko}->{percod} = '0';
+            $ko_results{$ko}->{percod} = '0';
+            $ovw_results{$cyc}{$ko}->{percgd} = '0';
+            $ko_results{$ko}->{percgd} = '0';                
+         } 
       }
    }
 }
-
+#print Dumper \%big_hash;
+#print Dumper \%ovw_results;
 my %modulesKO;
 my @c;
 open (MKO, "<$module_file") or die "Can't open $module_file";
@@ -2732,8 +3044,6 @@ open my $krona_g_fh , '>', "$dir/krona.g.tsv" or die $!;
 open my $krona_o_fh , '>', "$dir/krona.o.tsv" or die $!;
 open my $krona_d_fh , '>', "$dir/krona.od.tsv" or die $!;
 
-
-
 #printing out the data
 open my $totovw_fh , '>', "$dir/total.ovw" or die $!;
 open my $totovw_tsv_fh , '>', "$dir/total.tsv" or die $!;
@@ -2741,10 +3051,14 @@ open my $totovw_tsv_fh , '>', "$dir/total.tsv" or die $!;
 print {$totovw_fh} "Metabolic Overview\n\n";
 print {$totovw_tsv_fh} "Metabolic Overview\n\n";
 
+if ($phages or $phagesonly) {
+   print {$totovw_fh} "Total number of virus specific genes: $total_virussum\n\n";
+   print {$totovw_tsv_fh} "Total number of virus specific genes: $total_virussum\n\n";
+}   
+
 if ($total_gsum == 0 and $total_keggsum == 0) {
    print {$totovw_fh} "No metabolic genes found\n";
    print {$totovw_tsv_fh} "No metabolic genes found\n";}
-
 else {
    print {$totovw_fh} "Total key genes: $total_gsum\n";
    if (!$nokegg){print {$totovw_fh} "Total metabolic genes including kegg : $total_keggsum\nNOTE: pmoA/amoA is counted twice in this number\n\n";}
@@ -2890,7 +3204,9 @@ unless ($hmms or $phagesonly){
 for my $bin (keys %locus01){
    for my $i (keys %{$locus01 {$bin}}){
       my $tmp=$contig_id{$i};
-      $locus01{$bin}{$tmp}= delete $locus01{$bin}{$i};
+      if (defined $tmp){
+         $locus01{$bin}{$tmp}= delete $locus01{$bin}{$i};
+      }
    } 
 }
 my %avg;  
@@ -2976,7 +3292,7 @@ my @overviewarray;
 foreach my $bin (sort keys %avgHoAoHoH) {
    for my $contig (nsort keys %{$avgHoAoHoH {$bin} }){
       for my $i (sort keys @{$avgHoAoHoH {$bin}{$contig} }) {
-         my $count; my $countVQ;
+         my $count; my $countVQ=0;
          my $sum; my $sumVQ;
          my @locus;
          my %loci;
@@ -2986,23 +3302,28 @@ foreach my $bin (sort keys %avgHoAoHoH) {
              $loci{$locus}=$avgHoAoHoH{$bin}{$contig}[$i]{$locus};
              $count++;
              $sumVQ += $locusVQ{$locus}{'VQ'};
-
              if ($locusVQ{$locus}{'VQ'} > 0){
                 $countVQ++;
              }    
          }
          my $start=$locus[0]; my $virusstart= $locusVQ{$start}{'START'}; 
          my $end=$locus[-1];my $virusend= $locusVQ{$end}{'END'}; 
-         my $virlength =($virusend-$virusstart);         
-  
-         my $avgVQ=($sumVQ/$countVQ);
+         my $virlength =($virusend-$virusstart);
+         my $avgVQ;  
+         unless ($countVQ==0){
+            $avgVQ=($sumVQ/$countVQ);
+         }
+         else {$avgVQ=0;}
          my $perc = ($sum/$count *100);
-         my $percVQ; 
+         my $percVQ=0; 
          if ($sumVQ >0 and $countVQ >0){ $percVQ =($avgVQ *100);}
          my $mod= ($avgVQ);
-         #my $mod= (1-(log($avgVQ)));
+         #my $mod= (1-(log($avgVQ))); not sure what I wanted here
          my $moddedsum= ($avgVQ*$perc);
-         my $ballpark=sprintf("%.0f", (($id_contig{$contig}{'length'})/1000));
+         my $ballpark= 'NA';
+         unless ($aaonly){
+            $ballpark=sprintf("%.0f", (($id_contig{$contig}{'length'})/1000)); #option now as it the hash is empty for aaonly as there are no contigs
+         }
          my $sum_short =sprintf("%.2f", $sum);
          my @bcs= ($contigfasta{$contig}, $contig, $sum_short); my $str= join ":\t", @bcs; 
          push @overviewarray, $str;
@@ -3010,12 +3331,13 @@ foreach my $bin (sort keys %avgHoAoHoH) {
             print {$phage_ovw} "\nLocustag\tAvg\tVQ\tDescription\n";
             printf {$phage_ovw}("%s\t%.1f\t%.3f\t%s\n", $_, $loci{$_}, $locusVQ{$_}{'VQ'}, $locusVQ{$_}{'PROD'})  for (sort keys %loci);
             print {$phage_ovw} "\nstart: $virusstart\tend: $virusend\tlength: $virlength\n";
-            print {$phage_ovw} "Contig: $contig => $id_contig{$contig}{'id'} : length: $id_contig{$contig}{'length'} : ballpark number of genes: $ballpark\n\nGene count: $count\t";   
-            printf {$phage_ovw} ("Sum of averages:       %.1f\tPercentage (Sum Average/Gene count):       %.1f\n",$sum, $perc);
-            print {$phage_ovw} "VQ count: $countVQ\t";
-            printf {$phage_ovw} ("Sum of Viral Quotient: %.3f\tViral Quot.(SumVQ/VQc):     %.1f\n",$sumVQ, $percVQ);
-
-            printf {$phage_ovw} ("\t\tAverage of VQ genes:   %.3f\t*VQ modifier (VQavg):      %.3f\t*Modified hit perc(VQavg*Percentage): %.1f\n\n",$avgVQ, $mod, $moddedsum);
+            print {$phage_ovw} "Contig: $contig => $id_contig{$contig}{'id'} : length: $id_contig{$contig}{'length'} : ballpark number of genes: $ballpark\n\nQuantity output: Gene count: $count\t";   
+            printf {$phage_ovw} ("Sum of averages:       %.1f\t\nDensity: Percentage (Sum Average/Gene count*100):       %.1f\n",$sum, $perc);
+            print {$phage_ovw} "Quality output: VQ count: $countVQ\t";
+            printf {$phage_ovw} ("Sum of Viral Quotient: %.3f\tPercentage Viral Quot.(SumVQ/cVQ*100):     %.1f\n",$sumVQ, $percVQ);
+    #        printf {$phage_ovw} ("\t\tAverage of VQ genes:   %.3f\t*VQ modifier (avgVQ):      %.3f\t*Modified hit perc(avgVQ*Percentage): %.1f\n\n",$avgVQ, $mod, $moddedsum);
+            printf {$phage_ovw} ("\t\tAverage of VQ genes:   %.2f\n\n",$avgVQ); 
+            printf {$phage_ovw} ("Density and Quality modded: *Modified hit (Perc. Vir Quot * Percentage): %.1f\n\n", $moddedsum);                        
          }
       }
    }
@@ -3041,7 +3363,13 @@ delfile ("$dir/analyzedfastas.txt", "$dir/gensum.txt", "$dir/gendepthsum.txt", "
 runcmd("ktImportText \Q$dir/krona.g.tsv,Genes\E \Q$dir/krona.gd.tsv,Gene Depth\E \Q$dir/krona.o.tsv,Organisms\E \Q$dir/krona.od.tsv,Organism Depth\E \Q$dir/krona.mod.g.tsv,Modules Genes\E \Q$dir/krona.mod.gd.tsv,Modules Gene Depth\E \Q$dir/krona.mod.o.tsv,Modules Organisms\E \Q$dir/krona.mod.od.tsv,Modules Organism Depth\E \Q$dir/krona.proc.g.tsv,Process Genes\E \Q$dir/krona.proc.gd.tsv,Process Gene Depth\E \Q$dir/krona.proc.o.tsv,Process Organisms\E \Q$dir/krona.proc.od.tsv,Process Organism Depth\E -o $dir/krona.html");
 
 #remove files
-delfile ("$dir/krona.mod.g.tsv", "$dir/krona.mod.o.tsv", "$dir/krona.mod.od.tsv", "$dir/krona.mod.gd.tsv", "$dir/krona.proc.g.tsv", "$dir/krona.proc.o.tsv", "$dir/krona.proc.od.tsv", "$dir/krona.proc.gd.tsv", "$dir/krona.o.tsv", "$dir/krona.od.tsv", "$dir/krona.gd.tsv", "$dir/krona.g.tsv");
+delfile ("$dir/krona.mod.g.tsv", "$dir/krona.mod.o.tsv", "$dir/krona.mod.od.tsv", "$dir/krona.mod.gd.tsv", "$dir/krona.proc.g.tsv", "$dir/krona.proc.o.tsv", "$dir/krona.proc.od.tsv", "$dir/krona.proc.gd.tsv", "$dir/krona.o.tsv", "$dir/krona.od.tsv", "$dir/krona.gd.tsv", "$dir/krona.g.tsv", "$dir/prodigal.fh");
+
+#remove files when annotatoting existing gene calling
+if ($aaonly){
+   delfile ("$dir/total.tsv", "$dir/total.ovw", "$dir/ribosomal.ovw", "$dir/phage.tsv", "$dir/prodigal.txt", "$dir/krona.html", "$dir/depths.bins", "$dir/bin.id"); 
+#   runcmd("mv metagenome.tsv mod.tsv proc.tsv $dir/")
+}
 
 
 # to iterate over multiple directories, go the root/base/home directory from where your subdirs are and run:
