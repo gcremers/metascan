@@ -8,24 +8,33 @@ use SWISS::KW;
 use Data::Dumper;
 use JSON;
 use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::RealBin/../perl5"; # for bundled Perl modules
+use Cwd qw(getcwd);
+use Cwd qw(abs_path);
 
+my $EXE = $FindBin::RealScript;
+my $dir=getcwd;
 
 my(@Options, $verbose, $frag, $evlev, $minlen, $maxlen, $sep, $blank, $term, $hypo, $databasedir, $all, $protein, $cm, $metascan, $vog, $ribo, $checkm);
 setOptions();
 
+
 my @LOG;
 my $HYPO = 'hypothetical protein'; 
 my @tax =("Archaea", "Bacteria", "Viruses");
-   
-#create a directory 
-#Download UNIPROT_SPROT; CM; VOG; METASCAN DATA; 16Snt ;
 
-if (! $databasedir){ 
-   print "Please specify a location with --dbloc\n";
+#my $setup=$ARGV[0];
+#if (@ARGV == 0) {usage();}
+
+my $directorynamereal = $FindBin::RealBin;
+
+open (DB_SETUP, "<$directorynamereal/setup.txt") or die "Please run setup first";
+while (my $line = <DB_SETUP>){
+   chomp $line;
+   $databasedir=$line;
 }
-
-#chdir "$databasedir";
-runcmd("cp -r aux/ $databasedir");
+close DB_SETUP;
 
 if ($all){
    build_metascan();
@@ -60,7 +69,6 @@ if ($checkm and ! $all){
 
 sub build_metascan {
    print YELLOW "Downloading Metascan\n", RESET;
-   chdir "$databasedir";
    if (-s -e $databasedir){
       unless (-s -e "$databasedir/files"){
          runcmd("wget -P $databasedir https://zenodo.org/api/records/6365663/files");
@@ -72,7 +80,7 @@ sub build_metascan {
       runcmd("wget -N -nd -q $url/export/json");
    }
    else { 
-      err(print "PLEASE provide a path for the databases. --dbloc\n");
+      err(print "Something went wrong with the setup\n");
    } 
    
    my $json;
@@ -115,49 +123,60 @@ sub build_VOG {
       else {print RED "Skipping download\n", RESET;}
    }
    else { 
-      err(print "PLEASE provide a path for the databases. --dbloc\n");
+      err(print "Something went wrong with the setup\n");
    } 
-   chdir "$databasedir/virus/";
    print YELLOW "Extracting VOG\n", RESET;
-   if (-s -e "$databasedir/virus/vog.hmm.tar.gz"){
-      runcmd("tar -xOzf vog.hmm.tar.gz | cat - >> VOG");
+   unless (-s -e "$databasedir/virus/VOG"){
+      if (-s -e "$databasedir/virus/vog.hmm.tar.gz"){
+         runcmd("tar -xOzf $databasedir/virus/vog.hmm.tar.gz | cat - >> $databasedir/virus/VOG");
+      }
+      else {print RED "Skipping extracting, No tar.gz\n", RESET;}
    }
-   else {print RED "Skipping download\n", RESET;}
+   else {print RED "Skipping extracting\n", RESET;}
+   
    unless (-s -e "$databasedir/virus/vog.annotations.tsv.gz" or -s -e "$databasedir/virus/vog.annotations.tsv"){
-      runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.annotations.tsv.gz");
-   }
-   else {print RED "Skipping download\n", RESET;}
-   unless (-s -e "$databasedir/virus/vog.virusonly.tsv.gz" or -s -e "$databasedir/virus/vog.virusonly.tsv"){
-      runcmd("wget -N -nd https://fileshare.csb.univie.ac.at/vog/latest/vog.virusonly.tsv.gz");
+      runcmd("wget -N -nd -P $databasedir/virus/ https://fileshare.csb.univie.ac.at/vog/latest/vog.annotations.tsv.gz");
    }
    else {print RED "Skipping download\n", RESET;}
    
-   if (-s -e "vog.annotations.tsv.gz"){
-      runcmd("gunzip -f vog.annotations.tsv.gz");
+   unless (-s -e "$databasedir/virus/vog.virusonly.tsv.gz" or -s -e "$databasedir/virus/vog.virusonly.tsv"){
+      runcmd("wget -N -nd -P $databasedir/virus/ https://fileshare.csb.univie.ac.at/vog/latest/vog.virusonly.tsv.gz");
    }
-   if (-s -e "vog.virusonly.tsv.gz"){
-      runcmd("gunzip -f vog.virusonly.tsv.gz");
+   else {print RED "Skipping download\n", RESET;}
+   
+   unless (-s -e "$databasedir/virus/vog.annotations.tsv"){
+      if (-s -e "$databasedir/virus/vog.annotations.tsv.gz"){
+         runcmd("gunzip -f $databasedir/virus/vog.annotations.tsv.gz");
+      }
    }
+   else {print RED "Skipping extracting\n", RESET;}
+   
+   unless (-s -e "$databasedir/virus/vog.virusonly.tsv"){
+      if (-s -e "$databasedir/virus/vog.virusonly.tsv.gz"){
+         runcmd("gunzip -f $databasedir/virus/vog.virusonly.tsv.gz");
+      }
+   }
+   else {print RED "Skipping extracting\n", RESET;}
    
    print YELLOW "Building VOG\n", RESET;
    unless (-s -e "$databasedir/virus/VOG.hmm"){
       my %VOG;
-      open (KO, "<vog.annotations.tsv") or die "Can't open vog.annotations.tsv";
+      open (KO, "<$databasedir/virus/vog.annotations.tsv") or die "Can't open $databasedir/virus/vog.annotations.tsv";
       while (my $line = <KO>){
          chomp $line;
          my ($vogn, $b, $c, $d, $desc) = split(/\t/, $line, 5);
          $VOG{$vogn}=$desc;
       }
       my $meta="VOG";
-      open my $in,  '<',  "$meta"      or die "Can't read old file: $!";
-      open my $out, '>', "$meta.hmm" or die "Can't write new file: $!";
+      open my $in,  '<',  "$databasedir/virus/$meta"      or die "Can't read old file: $!";
+      open my $out, '>', "$databasedir/virus/$meta.hmm" or die "Can't write new file: $!";
       print {$out} "#CYCLE PHAGE\n\n";
       foreach  (<$in>)  {
          if ($_ =~ /^NAME/) {
             chomp $_;
             my ($name, $fname) = split(/\s+/, $_, 2);
-            print {$out} "NAME  $fname\nACC   KO:PHAGE\n";
-            print {$out} "DESC  phagegene; $VOG{$fname}\n"; 
+            print {$out} "NAME  $fname\nACC   KO:$fname\n";
+            print {$out} "DESC  $VOG{$fname}\n"; 
          }
          unless ($_ =~ m/^NAME/){
          print {$out} $_;}
@@ -180,7 +199,7 @@ sub build_protein {
       else {print RED "Skipping download\n", RESET};
    }   
    else { 
-      err(print "PLEASE provide a path for the databases. --dbloc\n");
+      err(print "Something went wrong with the setup\n");
    } 
    
    print YELLOW "Building Proteins\n", RESET;
@@ -296,22 +315,20 @@ sub build_cm {
          runcmd("gunzip $databasedir/cm/Rfam.cm.gz");
       }
    }
-   else { 
-      err(print "PLEASE provide a path for the databases. --dbloc\n");
+   else {err(print "Something went wrong with the setup\n");
    } 
- #  chdir "$databasedir/cm";
    foreach my $tax (@tax) {
       unless (-s -e "$databasedir/cm/$tax"){
-#        runcmd("mysql --user rfamro --host mysql-rfam-public.ebi.ac.uk --port 4497 --database Rfam  < $databasedir/aux/$tax.sql | tail -n +2 > $databasedir/aux/Rfam_$tax.txt");
-         runcmd("cmfetch -o $databasedir/aux/Rfam_$tax.cm -f $databasedir/cm/Rfam.cm $databasedir/aux/Rfam_$tax.txt");
-         runcmd("cmconvert -o $databasedir/cm/$tax -b $databasedir/aux/Rfam_$tax.cm");
+         runcmd("mysql --user rfamro --host mysql-rfam-public.ebi.ac.uk --port 4497 --database Rfam  < $databasedir/aux/$tax.sql | tail -n +2 > $databasedir/aux/Rfam_$tax.txt");
+         runcmd("cmfetch -o $databasedir/cm/Rfam_$tax.cm -f $databasedir/cm/Rfam.cm $databasedir/aux/Rfam_$tax.txt");
+         runcmd("cmconvert -o $databasedir/cm/$tax -b $databasedir/cm/Rfam_$tax.cm");
       }
    }
 }
 
 sub build_ribo {
    if (-s -e $databasedir){
-       print YELLOW "Downloading ribosomal\n", RESET;
+      print YELLOW "Downloading ribosomal\n", RESET;
       unless (-s -e "$databasedir/ribo/16S_ribosomal_RNA.tar.gz" or -s -e "$databasedir/ribo/16S_ribosomal_RNA.nin"){ 
          runcmd("wget -P $databasedir/ribo https://ftp.ncbi.nlm.nih.gov/blast/db/16S_ribosomal_RNA.tar.gz");
       }
@@ -320,38 +337,48 @@ sub build_ribo {
          runcmd("wget -P $databasedir/ribo https://ftp.ncbi.nlm.nih.gov/blast/db/LSU_prokaryote_rRNA.tar.gz");
       }
       else {print RED "Skipping download\n", RESET};
-      chdir "$databasedir/ribo";
+   
       print YELLOW "Extracting Ribosomal\n", RESET;
-      if (-s -e "$databasedir/ribo/LSU_prokaryote_rRNA.tar.gz"){
-         runcmd("tar -xzf LSU_prokaryote_rRNA.tar.gz");
-      }
-      if (-s -e "$databasedir/ribo/16S_ribosomal_RNA.tar.gz"){
-         runcmd("tar -xzf 16S_ribosomal_RNA.tar.gz");
-      }
-   }
-   else { 
-      err(print "PLEASE provide a path for the databases. --dbloc\n");
-   } 
-}
-sub build_checkm {
-   if (-s -e $databasedir){
-      unless (-s -e "$databasedir/checkm/hmms/checkm.hmm"){
-         print YELLOW "Downloading checkm\n", RESET;
-         unless (-s -e "$databasedir/checkm/checkm_data_2015_01_16.tar.gz"){
-            runcmd("wget -P $databasedir/checkm -N -nd -q https://data.ace.uq.edu.au/public/CheckM_databases/checkm_data_2015_01_16.tar.gz");
+      unless (-s -e "$databasedir/ribo/LSU_prokaryote_rRNA.ndb"){
+         chdir "$databasedir/ribo/";      
+         if (-s -e "LSU_prokaryote_rRNA.tar.gz"){
+            runcmd("tar -xzf LSU_prokaryote_rRNA.tar.gz");
          }
-         print YELLOW "Extracting Checkm\n", RESET;
-         runcmd("checkm data setRoot $databasedir/checkm");  
-         chdir "$databasedir/checkm/";
-         runcmd("tar -zxf checkm_data_2015_01_16.tar.gz");
+         chdir "$databasedir";         
       }
-      else {
-        print RED "Skipping download\n", RESET
-      };
+      else {print RED "Skipping extracting\n", RESET;}
+      
+      unless (-s -e "$databasedir/ribo/16S_ribosomal_RNA.ndb"){
+         chdir "$databasedir/ribo/";     
+         if (-s -e "16S_ribosomal_RNA.tar.gz"){
+            runcmd("tar -xzf 16S_ribosomal_RNA.tar.gz");
+         }
+         chdir "$databasedir";         
+      }
+      else {print RED "Skipping extracting\n", RESET;}
+   }
+   else {err(print "Something went wrong with the setup\n");} 
+}
+
+sub build_checkm {
+   if (-s -e $databasedir){ 
+      print YELLOW "Downloading checkm\n", RESET;
+      unless (-s -e "$databasedir/checkm/checkm_data_2015_01_16.tar.gz"){
+         runcmd("wget -P $databasedir/checkm -N -nd -q https://data.ace.uq.edu.au/public/CheckM_databases/checkm_data_2015_01_16.tar.gz");
+         }
+      else {print RED "Skipping download\n", RESET};
+      unless (-s -e "$databasedir/checkm/hmms/checkm.hmm"){
+         print YELLOW "Extracting Checkm\n", RESET;
+         chdir "$databasedir/checkm/";          
+         runcmd("checkm data setRoot $databasedir/checkm");  
+         runcmd("tar -zxf checkm_data_2015_01_16.tar.gz");
+         chdir "$databasedir";         
+      }
+      else {print RED "Skipping checkm\n", RESET}; 
    }
 }
 
-runcmd("rm  $databasedir/6365662  $databasedir/json $databasedir/files");
+runcmd("rm  $databasedir/6365662  $dir/json $databasedir/files $databasedir/virus/VOG $databasedir/virus/vog.hmm.tar.gz");
 #$databasedir/virus/vog.hmm.tar.gz $databasedir/virus/VOG $databasedir/ribo/LSU_prokaryote_rRNA.tar.gz  $databasedir/ribo/16S_ribosomal_RNA.tar.gz
 
 
@@ -372,16 +399,16 @@ sub setOptions {
     {OPT=>"maxlen=i",   	VAR=>\$maxlen, 		DEFAULT=>1E5, 		DESC=>"Maximum peptide length"},
     {OPT=>"term=s",   		VAR=>\$term, 		DEFAULT=>'', 		DESC=>"Lineage must contain this term eg. 'Bacteria'"},
     {OPT=>"hypo!",   		VAR=>\$hypo, 		DEFAULT=>0, 		DESC=>"Don't filter out hypothetical proteins"},
-    {OPT=>"dbloc=s",        	VAR=>\$databasedir,     DEFAULT=>'',     	DESC=>"Path to databases"},
     
     "\nDatabases:",
-    {OPT=>"metascan",           VAR=>\$metascan,        DEFAULT=>'',            DESC=>"Do not install metascan"},    
-    {OPT=>"all",                VAR=>\$all,             DEFAULT=>'',            DESC=>"Install All databases (protein,CM)"},  
-    {OPT=>"protein",            VAR=>\$protein,         DEFAULT=>'',            DESC=>"Install proteins (blast)"},  
-    {OPT=>"cm",                 VAR=>\$cm,              DEFAULT=>'',            DESC=>"Install CM (ncRNA)"},
-    {OPT=>"VOG",                VAR=>\$vog,             DEFAULT=>'',            DESC=>"Install VOG"},  
-    {OPT=>"ribo",               VAR=>\$ribo,            DEFAULT=>'',            DESC=>"Install Ribosomal genes"},
-    {OPT=>"checkm",             VAR=>\$checkm,          DEFAULT=>'',            DESC=>"Install Checkm"},          
+ 
+    {OPT=>"all",                VAR=>\$all,             DEFAULT=>'',            DESC=>"Install All databases"},      
+    {OPT=>"metascan",           VAR=>\$metascan,        DEFAULT=>'',            DESC=>"Install Metascan database"},   
+    {OPT=>"protein",            VAR=>\$protein,         DEFAULT=>'',            DESC=>"Install proteins (blast) database"},  
+    {OPT=>"cm",                 VAR=>\$cm,              DEFAULT=>'',            DESC=>"Install CM (ncRNA) database"},
+    {OPT=>"VOG",                VAR=>\$vog,             DEFAULT=>'',            DESC=>"Install VOG database"},  
+    {OPT=>"ribo",               VAR=>\$ribo,            DEFAULT=>'',            DESC=>"Install Ribosomal RNA database"},
+    {OPT=>"checkm",             VAR=>\$checkm,          DEFAULT=>'',            DESC=>"Install Checkm database"},          
   );       
 
   #(!@ARGV) && (usage());
@@ -397,6 +424,9 @@ sub setOptions {
 }
 
 sub usage {
+    print STDERR 
+    "Synopsis:\n  metascan database download\n",
+    "Usage:\n  $EXE setup.txt [options]\n";
     foreach (@Options) {
        if (ref) {
           my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";

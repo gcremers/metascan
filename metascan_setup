@@ -1,0 +1,91 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5"; # for bundled Perl modules
+use Data::Dumper;
+use Term::ANSIColor qw(:constants);
+
+my $EXE = $FindBin::RealScript;
+my $databasedir=$ARGV[0];
+
+if (@ARGV == 0) {usage();}
+
+my(@Options); #, $databasedir
+setOptions();
+
+unless ($databasedir =~ /^\//) {
+  err(print YELLOW "\nUse the full absolute path for the database\n\n", RESET);
+}
+
+#create and set database path in setup file.
+unless (-s -e "$databasedir"){
+   runcmd("mkdir $databasedir")
+}
+
+unless (-s -e "$databasedir/aux"){
+   runcmd("mkdir $databasedir/aux")
+}
+
+open my $setup_fh , '>', "setup.txt" or die $!;
+print {$setup_fh} "$databasedir";
+close $setup_fh;
+
+#copy aux files to database
+runcmd("cp -r ./aux/*.sql $databasedir/aux");
+runcmd("cp -r ./aux/ko00000.keg $databasedir/aux");
+runcmd("cp -r ./aux/*.pdf $databasedir/aux");
+
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+   use Getopt::Long;
+
+   @Options = (
+    "Options:",  
+    {OPT=>"help",		VAR=>\&usage,             			DESC=>"This help"},
+#    {OPT=>"dbloc=s",        	VAR=>\$databasedir,     DEFAULT=>'',     	DESC=>"Path to databases"},   
+  );       
+
+  #(!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} grep { ref } @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (ref $_ && defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {      
+    print STDERR 
+    "Synopsis:\n  Metascan setup\n",
+    "Usage:\n  $EXE /full/path/to/the/database-directory\n\n Run the setup from within the Metascan folder and use the absolute path for the database directory\n\n";
+    foreach (@Options) {
+       if (ref) {
+          my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+          $def = ($def ? ' (default OFF)' : '(default ON)') if $_->{OPT} =~ m/!$/;
+          my $opt = $_->{OPT};
+          $opt =~ s/!$//; 
+          $opt =~ s/=s$/ [X]/; 
+          $opt =~ s/=i$/ [N]/;
+          $opt =~ s/=f$/ [n.n]/;
+          printf STDERR "  --%-15s %s%s\n", $opt, $_->{DESC}, $def;
+       }
+       else {
+            print STDERR "$_\n";
+         }      
+      }
+      exit(1);
+}
+   
+sub err {
+  exit(2);
+}  
+sub runcmd {
+   system(@_)==0 or err("Could not run command:", @_);
+}

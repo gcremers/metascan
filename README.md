@@ -20,57 +20,45 @@ Therefor, Metascan now has its own Conda environment. This update was also used 
 
 ## **INSTALLATION:**
 
-To install Metascan, first clone Metascan to your system:
-
 ```bash
-# Clone the git repository to your system;
-git clone https://github.com/gcremers/metascan.git
-# and cd into this directoy
-cd metascan/
 # Create an enironment and activate the environment
 conda env create -f metascan.yaml -n metascan
 conda activate metascan
 
-# NB, the creation throws a number of error messages on my system. They do not seem to harm the installation.
+# Clone the git repository to your system;
 
-# Unfortunately some hardcoding is required. I hope to find a solution for this at some point.
-# Open the metascan script with (for instance) gedit.
-gedit ./metascan
-# and in line 50, change the path to the directory where you want the databases located in the line
-my $databasedir="/path/to/databases/metascan";
+git clone https://github.com/gcremers/metascan.git
 
-# create that directory
-mkdir /path/to/databases/metascan
+# and cd into this directoy
+cd metascan/
 
-# Put metascan in the bin folder of the environment (change the second part accordingly).
-# There is one extra script now for downloading the databases
-cp ./metascan /path/to/Anaconda/envs/metascan/bin/
-cp ./metascan_db_download /path/to/Anaconda/envs/metascan/bin/
+# Run the setup (this will create a setup file, the database directory if it doesn't already exist and copy some file to that directory)
+./metascan_setup /full/path/to/the/database-directory
+
+# Download and build all databases 
+./metascan --download
+
+# Index all the databases
+./metascan --setupdb
+
+# create a symlink to the metascan script of wanted.
+
 ```
 
 Metascan is now installed
 
-Now we have to build the databases
-
 ```bash
-# Still working from the github directory we created
-
-# Download the databases
-metascan . --download
-# Index the databases
-metascan . --setupdb
-# Check databases with 
-metascan . --listdb
-
 #if you want to save some space on your system and if you already have a checkm database, you can (re)set the path with
 checkm data setRoot <DB_PATH>
-see checkm data -h
+#see: checkm data -h
 ```
 
 Metascan should now be ready to use.
 
 ### Updating metascan
-If metascan is installed properly, updating it is as easy as replacing the metascan perl script with the new one. You could even keep the old script and change the symlink or call upon the new script directly.
+Normally, if Metascan is installed properly, updating it is as easy as replacing the metascan perl script with the new one. You could even keep the old script and change the symlink or call upon the new script directly.
+
+However, since the installation slightly changed regarding to the paths used, it might be necessary to run the installation again.
 
 ##### Some notes:
 
@@ -316,7 +304,7 @@ Besides the generic overview files, Metascan creates a number of files for each 
 - **XXXXXXXX.embl** : ENA embl file
 - **XXXXXXXX.log** : log file
 - **XXXXXXXX.f16** : fasta file containing rRNA sequences
-- **XXXXXXXX.tabel** : feature table
+- **XXXXXXXX.table** : feature table
 - **XXXXXXXX.txt** : general info on the annotation
 - **XXXXXXXX.kegg** : File that can be used to reconstruct pathwyas in KEGG (https://www.genome.jp/kegg/mapper/reconstruct.html)
 - **XXXXXXXX.fall** : all genes in bases (CDS and rRNA)

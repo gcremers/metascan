@@ -45,14 +45,17 @@ use lib "$FindBin::RealBin/../perl5"; # for bundled Perl modules
 use File::Path qw(remove_tree);
 use File::Basename;
 
+my $directorynamereal = $FindBin::RealBin;
 
-# Change this URL to the location where your databases are stored: The auxillary files also go into the databasedir.
-my $databasedir="/path/to/databases/metascan";
+my $databasedir;
+open (DB_SETUP, "<$directorynamereal/setup.txt") or die "Please run setup first";
+while (my $line = <DB_SETUP>){
+   chomp $line;
+   $databasedir=$line;
+}
+close NAMES;
 
-#my $databasedir_blastnt="$databasedir/ribo/nt";
 my $databasedir_blastn="$databasedir/ribo/16S_ribosomal_RNA";
-#my $KEGG_hmm="$databasedir/meta.nonkey";
-#my $phages_hmm="$databasedir/virus/\w*\.hmm";
 my $virquotient_fh = "$databasedir/virus/vog.virusonly.tsv";
 my $KO_virus= "$databasedir/virus/vog.annotations.tsv";
 my $KO_file="$databasedir/aux/ko00000.keg";
@@ -89,8 +92,7 @@ my $UNANN = 'unannotated protein';
 my $MAXCONTIGIDLEN = 37;  # Genbank rule
 my $SIGNALP_MAXSEQ = 10_000;  # maximum allowed input for signalp
 my @LOG; # buffer up log lines before we have log file ready
-#my $dir=getcwd;
-#my $cdir=getcwd;
+
 my $fastadir;
 my %seq;
 my @seq;
@@ -418,7 +420,7 @@ if ($phages or $phagesonly){
 if ($bothhmms){
    print "Custom files: $bothhmms\n";
    open (KO, "<$bothhmms") or die "Can't open $bothhmms";
-   print "Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
+   print "INFO: Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
    my @ko; my @desc;
    while (my $line = <KO>){   
       chomp $line;
@@ -437,7 +439,7 @@ if ($bothhmms){
 if ($hmms){
    print "Custom files: $hmms\n";
    open (KO, "<$hmms") or die "Can't open $hmms";
-   print "Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
+   print "INFO Correct processing of the user defined HMM data depends on an 'ACC' field which starts with 'KO:' and a 'DESC' filed containing any description of the gene\n";
    my @ko; my @desc;
    while (my $line = <KO>){   
       chomp $line;
@@ -470,19 +472,19 @@ closedir (DM);
 
 if ($bothhmms){
    push @hmmdatabases, $bothhmms;}
-if ($hmms){
-   undef @hmmdatabases;
-   push @hmmdatabases, $hmms;}
 if (!$nokegg){
    push @hmmdatabases, $KEGG_hmm;}
 if ($phages){
    push @hmmdatabases, $phages_hmm;}
+if ($hmms){
+   undef @hmmdatabases;
+   push @hmmdatabases, $hmms;}  
 if ($phagesonly){
    undef @hmmdatabases;
    push @hmmdatabases, $phages_hmm;
    if ($hmms){
       push @hmmdatabases, $hmms;
-   }
+   } 
 }
 print "Preparing databases\n";
 
@@ -2647,9 +2649,9 @@ EOCITE
    }
 
    sub download_db {
-      msg( "Downloading databases in: $databasedir/" );  
-         print "metascan_db_download --dbloc $databasedir --all\n";
-         system("metascan_db_download --dbloc $databasedir --all");
+      msg( "Downloading databases in: $databasedir" );  
+         print "$directorynamereal/metascan_db_download  --all\n";
+         system("$directorynamereal/metascan_db_download  --all");
       exit(0);
    }
 
@@ -2695,7 +2697,7 @@ EOCITE
        
         "\nSetup:",
         {OPT=>"listdb",         VAR=>\&list_db,                            DESC=>"List all configured databases"},
-        {OPT=>"download",       VAR=>\&download_db,                        DESC=>"Download databases"},
+        {OPT=>"download",       VAR=>\&download_db,                        DESC=>"Download all databases"},
         {OPT=>"setupdb",        VAR=>\&setup_db,                           DESC=>"Index all installed databases. Manually please until thoroughly checked"},
         {OPT=>"cleandb",        VAR=>\&clean_db,                           DESC=>"Remove all database indices"},
         {OPT=>"depends",        VAR=>\&list_depends,                       DESC=>"List all software dependencies"},
@@ -2778,7 +2780,7 @@ EOCITE
         | |  |||  /_   | |  | |-||\\___ ||  \\_ | |-||| | \\||
         \\_/  \\|\\____\\  \\_/  \\_/ \\|\\____/\\____/\\_/ \\|\\_/  \\|\n
         ",ucfirst($EXE), " $VERSION by $AUTHOR\n\n",
-      "Synopsis:\n  rapid prokarotic metabolic gene identification\n",
+      "Synopsis:\n  rapid prokarotic metabolic metagenomic gene identification\n",
       "Usage:\n  $EXE <dir> [options]";
       foreach (@Options) {
          if (ref) {
