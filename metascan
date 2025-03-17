@@ -53,7 +53,7 @@ while (my $line = <DB_SETUP>){
    chomp $line;
    $databasedir=$line;
 }
-close NAMES;
+close DB_SETUP;
 
 my $databasedir_blastn="$databasedir/ribo/16S_ribosomal_RNA";
 my $virquotient_fh = "$databasedir/virus/vog.virusonly.tsv";
