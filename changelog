@@ -42,9 +42,13 @@ Also, youĺl have to use it in combinaition with --hmms, otherwise Metascan will
 
 * Added tmpdir option
 
-* Changed the the outdir is handled
+* Changed the way outdir is handled
 
 * Help function is easier to access
 
 * added --shortid option to reduce headers in fastas 
+
+1.6 (March 17 2025)
+
+* removed the mapping option. There are far more advanced binning applications that will do the mapping along with the binning and report the coverage. Coverage can still be used my Metascan.
 

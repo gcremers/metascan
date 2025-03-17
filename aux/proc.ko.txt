@@ -1,6 +1,5 @@
 Carbon Cycle	Formaldehyde Assimilation -Serine	K08691
 Carbon Cycle	Formaldehyde Assimilation -Serine	K08692	K14067
-Carbon Cycle	Formaldehyde Assimilation -Serine	K00600
 Carbon Cycle	Formaldehyde Assimilation -Rump	K08093	K13812	K13831
 Carbon Cycle	Methanotrophy	K15228	K15229
 Carbon Cycle	Methanotrophy (core CH4)	K10944	K10945	K10946	K16157	K16158	K16159	K16160	K16162

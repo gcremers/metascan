@@ -45,8 +45,7 @@ sub setOptions {
 
    @Options = (
     "Options:",  
-    {OPT=>"help",		VAR=>\&usage,             			DESC=>"This help"},
-#    {OPT=>"dbloc=s",        	VAR=>\$databasedir,     DEFAULT=>'',     	DESC=>"Path to databases"},   
+    {OPT=>"help",		VAR=>\&usage,             			DESC=>"This help"},  
   );       
 
   #(!@ARGV) && (usage());

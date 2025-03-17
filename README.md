@@ -16,15 +16,11 @@ When Metascan was developped, it was based on Prokka, as Prokka already had most
 Because of this, Metascan would run if Prokka worked on the sytem.
 
 However, due a cascade of changes starting with a change of tbl2asn to tabel2asn, it is alot more difficult to use Metascan if Prokka can run in an environment or system.
-Therefor, Metascan now has its own Conda environment. This update was also used to include a viral sequence algorithm which is VERY! beta (see below).
+Therefor, Metascan now has its own Conda environment. The viral sequence algorithm which is VERY! beta (see below).
 
 ## **INSTALLATION:**
 
 ```bash
-# Create an enironment and activate the environment
-conda env create -f metascan.yaml -n metascan
-conda activate metascan
-
 # Clone the git repository to your system;
 
 git clone https://github.com/gcremers/metascan.git
@@ -32,7 +28,11 @@ git clone https://github.com/gcremers/metascan.git
 # and cd into this directoy
 cd metascan/
 
-# Run the setup (this will create a setup file, the database directory if it doesn't already exist and copy some file to that directory)
+# Create an enironment and activate the environment
+conda env create -f metascan.yaml -n metascan
+conda activate metascan
+
+# Run the setup-script (this will create 1) a setup file, 2) the database directory if it doesn't already exist and 3) copy some file to that directory)
 ./metascan_setup /full/path/to/the/database-directory
 
 # Download and build all databases 
@@ -41,11 +41,13 @@ cd metascan/
 # Index all the databases
 ./metascan --setupdb
 
-# create a symlink to the metascan script of wanted.
+# create a symlink to the metascan script if desired.
 
 ```
 
 Metascan is now installed
+
+Note, creating the environment gave a Clobbererror in my installation test, but it didn't seem to effect further installation or Metascan itself.
 
 ```bash
 #if you want to save some space on your system and if you already have a checkm database, you can (re)set the path with

@@ -16,7 +16,7 @@ ATP	M00417 Cytochrome o ubiquinol oxidase	K02297	K02300
 ATP	M00153 Cytochrome bd ubiquinol oxidase	K00425	K00426										
 ATP	M00154 Cytochrome c oxidase	K02257											
 Methane	M00174 Methane oxidation, methanotroph, methane -> formaldehyde	K10944	K10945	K10946	K14028	K14029	K16157	K16158	K16159	K16160	K16162	K17066	K00093
-Methane	M00346 Formaldehyde assimilation, serine pathway	K00600	K08692	K14067	K08691
+Methane	M00346 Formaldehyde assimilation, serine pathway	K08692	K14067	K08691
 Methane	M00345 Formaldehyde assimilation, ribulose monophosphate pathway	K08093	K13812	K13831
 Methane	M00357 Methanogenesis, acetate -> methane	K00193	K00194	K00197	K00399	K00401	K00402	K03421	K22516	K00125
 Methane	M00567 Methanogenesis, CO2 -> methane	K00399	K00401	K00402	K00672	K01499	K03421	K22516	K00125	K10713

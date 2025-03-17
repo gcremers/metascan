@@ -86,7 +86,6 @@ my $AUTHOR = 'G. Cremers';
 my $URL = 'github.com/gcremers/metascan';
 my $METASCAN_PMID = '36304333';
 my $METASCAN_DOI = 'https://doi.org/10.3389/fbinf.2022.861505';
-#my $DBDIR = "$FindBin::RealBin/../db";
 my $HYPO = 'hypothetical protein';
 my $UNANN = 'unannotated protein';
 my $MAXCONTIGIDLEN = 37;  # Genbank rule
@@ -103,7 +102,7 @@ my $barrnap_mode = 'bac';
 
 # command line options 
 
-my(@Options, $quiet, $debug, $kingdom, $force, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $nolengthsort, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $addgenes, $depth, $bothhmms, $checkmqi, $mapping, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore, $phages, $phagesonly, $windowsize, $minsum, $tmpdir, $aaonly, $shortid, $dir); #$stringent $outdir,
+my(@Options, $quiet, $debug, $kingdom, $force, $prefix, $cpus, $gcode, $gffver, $locustag, $increment, $nolengthsort, $mincontiglen, $eval, $hmms, $centre, $rawproduct, $compliant, $listdb, $citation, $addgenes, $depth, $bothhmms, $checkmqi, $nozero, $norrna, $nokegg, $prokka, $trna, $ncrna, $crispr, $gram, $sizeperc, $ekegg, $enokegg, $smalltrgt, $sizepercpart, $part_eval_out, $restore, $phages, $phagesonly, $windowsize, $minsum, $tmpdir, $aaonly, $shortid, $dir); #$stringent $outdir
 
 setOptions();
 
@@ -231,7 +230,7 @@ my %tools = (
      NEEDED  => 0, # only if --prokka is used
    },
    'checkm' => {
-     GETVER  => "checkm -h |grep 'CheckM'",
+     GETVER  => "checkm |grep 'CheckM'",
      REGEXP  => qr/($BIDEC)/,
      MINVER  => "1",
      NEEDED  => 0,
@@ -241,18 +240,6 @@ my %tools = (
     REGEXP  => qr/makeblastdb:\s+($BIDEC)/,
     MINVER  => "2.2",
     NEEDED  => 0,  # only if --proteins used
-   },
-   'samtools' => {
-     GETVER  => "samtools 2>&1 | grep 'Version'",
-     REGEXP  => qr/Version:\s+($BIDEC)/,
-     MINVER  => "1.1", #This is actually 1.6, but since were at 1.13 now
-     NEEDED  => 0,
-   },
-   'bwa' => {
-     GETVER  => "bwa 2>&1 | grep 'Version'",
-     REGEXP  => qr/Version:\s+($BIDEC)/,
-     MINVER  => "0.7",
-     NEEDED  => 0,
    },
    'signalp' => {
      # this is so long-winded as -v changed meaning (3.0=version, 4.0=verbose !?)
@@ -308,10 +295,6 @@ if ($prokka){
    $tools{'minced'}{'NEEDED'}=1;
    $tools{'cmscan'}{'NEEDED'}=1;   
    $tools{'cmpress'}{'NEEDED'}=1;
-}
-if ($mapping){
-   $tools{'samtools'}{'NEEDED'}=1;   
-   $tools{'bwa'}{'NEEDED'}=1;
 }
 if ($ncrna){
    $tools{'cmscan'}{'NEEDED'}=1;   
@@ -829,7 +812,6 @@ foreach my $bin (@fastas) {
       if (!$nolengthsort){
          @sequences =sort {$b->length <=>$a->length} @sequences;
       } 
-
       for my $seq (@sequences){
          $ncontig++;      
          my $id =$seq->id;
@@ -848,7 +830,10 @@ foreach my $bin (@fastas) {
             $id = sprintf "gnl|$centre|${contigprefix}%d", $ncontig;
          }
          if ($shortid) {  
-            $id = sprintf "c${contigprefix}%d", $ncontig;
+            open my $contigs_fh, '>>', "$dir/$outdir2/$prefix.contigs_short";
+            my $oldid= $id;
+            $id = sprintf "${contigprefix}%d", $ncontig;
+            print {$contigs_fh} "$oldid\t$id\n";
          }
 
          my $s = $seq->seq;
@@ -953,10 +938,6 @@ foreach my $bin (@fastas) {
    msg("Annotating as >>> $kingdom <<<");
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-   # check if --setupdb has been run for BLAST
-
-
-   # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # add our included binaries to the END of the PATH
 
    add_bundle_to_path();
@@ -964,18 +945,9 @@ foreach my $bin (@fastas) {
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # check if optional tools are installed if the option was enabled
    
- # if ($checkmqi and ! $tools{'checkm'}->{HAVE}) {
-  #    err("You need to install 'checkm' to use the --checkmqi option.");
-   #                                              }
-   if ($mapping and ! $tools{'bwa'}->{HAVE}) {
-      err("You need to install BWA to use the --mapping option.");
-                                             }
-   if ($mapping and ! $tools{'metabat2'}->{HAVE}) {
-      err("You need to install Metabat2 to use the --mapping option.");
-                                                  }
-   if ($mapping and ! $tools{'samtools'}->{HAVE}) {
-      err("You need to install Samtools to use the --mapping option.");
-                                                  }
+  if ($checkmqi and ! $tools{'checkm'}->{HAVE}) {
+      err("You need to install 'checkm' to use the --checkmqi option.");
+                                                 }
    if ($prokka || $ncrna and ! $tools{'cmscan'}->{HAVE}) {
       err("You need to install 'cmscan' to use the --prokka or --ncrna option.");
                                                          }
@@ -1481,7 +1453,7 @@ foreach my $bin (@fastas) {
       my $paropts = $cpus > 0 ? " -j $cpus" : "";
       my $hmm_name = "$dir/$outdir2/$outname.".$db->{FMT};
 
-      if(-s $db->{DB} > 150000000 ){
+      if(-s $db->{DB} > 160000000 ){
          runcmd("${PARALLELCMD}$paropts -a $db->{DB} $cmd > \Q$hmm_name\E ");}#2> /dev/null
       else {
          runcmd("cat $db->{DB} | $cmd > \Q$hmm_name\E 2> /dev/null");} 
@@ -1512,11 +1484,9 @@ foreach my $bin (@fastas) {
                if($qlength > $Tlow && $qlength < $Thigh){
                   if ($qlength <= $smalltrgt){ #qlength or tlength; not sure yet
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
-                #    print "A $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                   if (($qlength >= $smalltrgt) and ($evalue <= $eval_out)){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
-                 #   print "b $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                }
             }
@@ -1524,11 +1494,9 @@ foreach my $bin (@fastas) {
                if($qlength > $Tpartlow && $tlength < $Tparthigh){
                   if ($qlength <= $smalltrgt){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
-                 #   print "c $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                   if (($qlength >= $smalltrgt) and ($evalue <= $part_eval_out)){
                      print {$hmm_fh} "$CDS_id\t$NAME\t$bit\t$evalue\t$dbid\t$prefix\t$ACC\t$DESC\n";
-                 #   print "d $tlength  $qlength  $bit   $evalue    $ACC\n";
                   }
                }
             }
@@ -1620,8 +1588,6 @@ foreach my $bin (@fastas) {
    msg("Cleaned $num_cleaned /product names") if $num_cleaned > 0;
    close UNIQ;
    delfile($faa_name);
-
-#print Dumper \%cds;
 
    #blast remainig CDS
    unless ($aaonly){   
@@ -1788,7 +1754,6 @@ foreach my $bin (@fastas) {
 
    # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
    # Write it all out!
-#  print Dumper \%seq;
    msg("Writing outputs to $dir/$outdir2/");
    open my $gff_fh, '>', "$dir/$outdir2/$prefix.gff";
    open my $ovw_tsv_fh, '>', "$dir/$outdir2/$prefix.tsv";
@@ -2005,97 +1970,6 @@ foreach my $bin (@fastas) {
       close(DEPTH);
    }
 
-   # Binmate pipeline uses Paired End reads only  
-   if ($mapping) {
-      if ($toobig==0){ #using bin coverage for depth calculation 
-         if (length( $depth // '') && $depth_value!=0) {msg("Abundance data already available");}
-         else {
-            opendir (MAPPING, $mapping) or die "Could not open '$mapping' for reading '$!'\n";
-            my @fastq = grep {$_ =~ /fastq/i or $_ =~/fq/i} readdir (MAPPING);
-            foreach (@fastq) {
-               msg("Mapping Fastq reads to contigs");
-               map_sub($bin);
-            }
-            closedir(MAPPING);
-            if (glob("$dir/$outdir2/map/$prefix.*.sorted.bam.bai")) {
-               my @checkm_tot;
-               my $num_con=0;
-               my $loopcount=0;
-               foreach (@fastq) {
-                  $loopcount ++;
-                  runcmd("checkm coverage -x $x --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir2/map/  $dir/$outdir2/map/$prefix.$_.checkm_cov.tsv $dir/$outdir2/map/$prefix.$_.sorted.bam");          
-                  delfile("$dir/$outdir2/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir2/map/$prefix.$_.sorted.bam");
-                  open(CHECKM, "<$dir/$outdir2/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
-                  while (<CHECKM>)  {
-                     next if $. == 1;
-                     my @checkm_cov= split (/\t/, "$_");
-                     $num_con ++;
-                     push @checkm_tot, $checkm_cov[4]; 
-                  }
-                  close(CHECKM);
-               }
-               my $contig_count= $num_con/$loopcount;
-               my $checkm_tot_sum = sum0 @checkm_tot;
-               $depth_value= $checkm_tot_sum /$contig_count;
-            }
-         }
-      }
-   }
-   if ($mapping) {
-      if ($toobig==1){ #using gene coverage for depth calculation
-         if (length( $depth // '') && $depth_value!=0)  {msg("Abundance data already available");}
-         else {
-            opendir (MAPPING, $mapping) or die "Could not open '$mapping' for reading '$!'\n";
-            my @fastq = grep {$_ =~ /fastq/i or $_ =~/fq/i} readdir (MAPPING);
-            system("cp $dir/$outdir2/$prefix.hmm.ffn $dir/");
-            foreach (@fastq) {
-               msg("Mapping Fastq reads to genes");
-               map_sub("$dir/$prefix.hmm.ffn");
-            }
-            closedir(MAPPING);
-            if (glob("$dir/$outdir2/map/$prefix.*.sorted.bam.bai")) {
-               my @checkm_tot;
-               foreach (@fastq) {
-                  runcmd("checkm coverage -x ffn --all_reads --min_align 0.95 -q -t $cpus $dir/$outdir2/map/  $dir/$outdir2/map/$prefix.$_.checkm_cov.tsv $dir/$outdir2/map/$prefix.$_.sorted.bam");          
-                  delfile("$dir/$outdir2/map/$prefix.$_.sorted.bam.bai", "$dir/$outdir2/map/$prefix.$_.sorted.bam");
-                  my %checkm_cov;
-                  open(CHECKM, "<$dir/$outdir2/map/$prefix.$_.checkm_cov.tsv") or die "Unable to open file\n";
-                  while (<CHECKM>)  {
-                     chomp $_;
-                     next if $. == 1;
-                     my @line= split (/\t/, "$_");
-                     $checkm_cov{$line[0]} += $line[4]; 
-                  }
-                  close(CHECKM);
-                  foreach my $cyc (sort keys %datastructure){
-                     my $selector = $cyc;
-                     foreach my $ko (sort keys %{ $datastructure {$cyc} }) {
-                        my @loci;
-                        @loci = grep { $locacc{$_} eq $ko } keys %locacc;
-                        for my $loc (@loci){
-                           $big_hash{$bin}{$cyc}{$ko}->{gendepth} += $checkm_cov{$loc};
-                           unless ($selector =~ 'meta.nonkey'){
-                              $total_gdsum += $big_hash{$bin}{$cyc}{$ko}{'gendepth'};
-                           }
-                        }
-                     }      
-                  }
-               }
-            }
-            delfile("$dir/$prefix.hmm.ffn")
-         }
-      }
-   } 
-   elsif (!$mapping){
-      if ($toobig==1){
-         foreach my $cyc (sort keys %datastructure){
-            foreach my $ko (sort keys %{ $datastructure {$cyc} }) {
-               $big_hash{$bin}{$cyc}{$ko}->{gendepth}=0;
-               $big_hash{$bin}{$cyc}{$ko}->{orgdepth}=0;
-            }      
-         }
-      }
-   }
    # CheckM Bin Quality and Identification
    if ($checkmqi){
       if (length( $depth // '' )) {msg("Checkm data already available");}
@@ -2228,7 +2102,6 @@ foreach my $bin (@fastas) {
    #......................................................................
    # trying to parse the data into a neat hash
 
- #  print Dumper \%VirQuot;
    msg("Generating overview files");
    # now we have to count the occurences of genes(key) in the hmm tab file
    my $count_cycle=0; #excluding kegg
@@ -2303,7 +2176,6 @@ foreach my $bin (@fastas) {
       }
    }
    #printing out the data
-#   print Dumper \%big_hash;
    print $ovw_fh ("\nMetabolic potential\n");
    if ($phages or $phagesonly) {print {$ovw_fh} "Total number of virus specific genes: $count_virus\n\n";}   
    if ($count_cycle == 0) {print {$ovw_fh} "No key genes found\n";}
@@ -2405,7 +2277,6 @@ unless ($aaonly){
    msg("If you use this result please cite the Metascan paper:\ndoi:$METASCAN_DOI");
    
    msg("This script is based on: Seemann T (2014) Prokka: rapid prokaryotic genome annotation. Bioinformatics. 30(14):2068-9.");
-   msg("Type 'prokka --citation' for more details.");
    msg("************************************");
    
   #remove files when annotatoting existing gene calling
@@ -2701,7 +2572,6 @@ EOCITE
         {OPT=>"setupdb",        VAR=>\&setup_db,                           DESC=>"Index all installed databases. Manually please until thoroughly checked"},
         {OPT=>"cleandb",        VAR=>\&clean_db,                           DESC=>"Remove all database indices"},
         {OPT=>"depends",        VAR=>\&list_depends,                       DESC=>"List all software dependencies"},
-#        {OPT=>"dbloc=s",        VAR=>\$databasedir,   DEFAULT=>'',       DESC=>"Path to databases"},
         
         "\nOutputs:",
         {OPT=>"force!",         VAR=>\$force,         DEFAULT=>0,          DESC=>"Force overwriting existing output folder"},
@@ -2744,7 +2614,6 @@ EOCITE
         "\nAdditional Options:",
         {OPT=>"depth=s",        VAR=>\$depth,         DEFAULT=>'',         DESC=>"Include Depth of Genes. Use the Binmate TSV overview file"},
         {OPT=>"checkm!",        VAR=>\$checkmqi,      DEFAULT=>'',         DESC=>"CheckM for Bin Quality Control and Identification"},
-        {OPT=>"mapping=s",      VAR=>\$mapping,       DEFAULT=>'',         DESC=>"Map reads to genes. Requires dir name containing FASTQ file(s)"},
 
         "\nDatabase options",
         {OPT=>"phages!",        VAR=>\$phages,        DEFAULT=>0,          DESC=>"Add phages for Annotation and analysis"},
@@ -2800,22 +2669,7 @@ EOCITE
       exit(1);
    }
    #-------------------------------------------------------------------------
-   # Mapping subroutine $bin #-k 49 -B 10 -O 7 -E 6 -w 2 -T 50
-   sub map_sub {
-      if (! -d "$dir/$outdir2/map" or ! -e "$dir/$outdir2/map/@_"){
-         runcmd("mkdir -p $dir/$outdir2/map/ && cp $dir/@_ $dir/$outdir2/map/");
-      }
-      if (! -e "$dir/$outdir2/map/@_.amb"){
-         runcmd("bwa index $dir/$outdir2/map/@_");
-      }
-      if (-s "$dir/$outdir2/map/@_"){ 
-         runcmd("bwa mem -M -t $cpus  $dir/$outdir2/map/@_ $mapping/$_ > $dir/$outdir2/map/$prefix.$_.sam");
-         runcmd("samtools view -@ $cpus -h -bt $dir/$outdir2/map/@_ -o $dir/$outdir2/map/$prefix.$_.unsorted.bam $dir/$outdir2/map/$prefix.$_.sam");
-         runcmd("samtools sort -@ $cpus $dir/$outdir2/map/$prefix.$_.unsorted.bam -o $dir/$outdir2/map/$prefix.$_.sorted.bam");
-         runcmd("samtools index -b -@ $cpus $dir/$outdir2/map/$prefix.$_.sorted.bam");
-         delfile ("$dir/$outdir2/map/$prefix.$_.unsorted.bam", "$dir/$outdir2/map/$prefix.$_.sam")
-      }
-   }
+
    #store hash and data in a file:
    store(\%big_hash, "$dir/file_hash.txt");
    store(\%locus01, "$dir/file_locus01.txt");
@@ -3005,8 +2859,7 @@ for my $bin (keys %big_hash) {
       }
    }
 }
-#print Dumper \%big_hash;
-#print Dumper \%ovw_results;
+
 my %modulesKO;
 my @c;
 open (MKO, "<$module_file") or die "Can't open $module_file";
@@ -3033,14 +2886,14 @@ while (my $line = <PKO>){
 }
 close (PKO);
 
-open my $krona_mod_pd_fh , '>', "$dir/krona.mod.gd.tsv" or die $!;
+open my $krona_mod_gd_fh , '>', "$dir/krona.mod.gd.tsv" or die $!;
 open my $krona_mod_g_fh , '>', "$dir/krona.mod.g.tsv" or die $!;
 open my $krona_mod_o_fh , '>', "$dir/krona.mod.o.tsv" or die $!;
-open my $krona_mod_d_fh , '>', "$dir/krona.mod.od.tsv" or die $!;
-open my $krona_proc_pd_fh , '>', "$dir/krona.proc.gd.tsv" or die $!;
+open my $krona_mod_od_fh , '>', "$dir/krona.mod.od.tsv" or die $!;
+open my $krona_proc_gd_fh , '>', "$dir/krona.proc.gd.tsv" or die $!;
 open my $krona_proc_g_fh , '>', "$dir/krona.proc.g.tsv" or die $!;
 open my $krona_proc_o_fh , '>', "$dir/krona.proc.o.tsv" or die $!;
-open my $krona_proc_d_fh , '>', "$dir/krona.proc.od.tsv" or die $!;
+open my $krona_proc_od_fh , '>', "$dir/krona.proc.od.tsv" or die $!;
 open my $krona_pd_fh , '>', "$dir/krona.gd.tsv" or die $!;
 open my $krona_g_fh , '>', "$dir/krona.g.tsv" or die $!;
 open my $krona_o_fh , '>', "$dir/krona.o.tsv" or die $!;
@@ -3136,20 +2989,20 @@ unless ($hmms or $phagesonly){
                   if ($modulesKO{$cyc}{$module}{$ko}{'totg'} >= 1) {
                      unless ($selector =~ 'meta.nonkey' or $selector =~ 'VOG'){
                         printf $totmod_fh ("\t\t%s\t%s\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$ko, $modulesKO{$cyc}{$module}{$ko}{'totg'}, $modulesKO{$cyc}{$module}{$ko}{'percg'}, $modulesKO{$cyc}{$module}{$ko}{'toto'}, $modulesKO{$cyc}{$module}{$ko}{'perco'}, $modulesKO{$cyc}{$module}{$ko}{'totod'}, $modulesKO{$cyc}{$module}{$ko}{'percod'}, $modulesKO{$cyc}{$module}{$ko}{'totgd'}, $modulesKO{$cyc}{$module}{$ko}{'percgd'},  $modulesKO{$cyc}{$module}{$ko}{'description'});
-                        print {$krona_mod_pd_fh} "$modulesKO{$cyc}{$module}{$ko}{'totgd'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
+                        print {$krona_mod_gd_fh} "$modulesKO{$cyc}{$module}{$ko}{'totgd'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                         print {$krona_mod_g_fh} "$modulesKO{$cyc}{$module}{$ko}{'totg'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                         print {$krona_mod_o_fh} "$modulesKO{$cyc}{$module}{$ko}{'toto'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
-                        print {$krona_mod_d_fh} "$modulesKO{$cyc}{$module}{$ko}{'totod'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
+                        print {$krona_mod_od_fh} "$modulesKO{$cyc}{$module}{$ko}{'totod'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                      }
                   }
                }
                else {
                   unless ($selector =~ 'meta.nonkey' or $selector =~ 'VOG'){
                      printf $totmod_fh ("\t\t%s\t%s\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$ko, $modulesKO{$cyc}{$module}{$ko}{'totg'}, $modulesKO{$cyc}{$module}{$ko}{'percg'}, $modulesKO{$cyc}{$module}{$ko}{'toto'}, $modulesKO{$cyc}{$module}{$ko}{'perco'}, $modulesKO{$cyc}{$module}{$ko}{'totod'}, $modulesKO{$cyc}{$module}{$ko}{'percod'}, $modulesKO{$cyc}{$module}{$ko}{'totgd'}, $modulesKO{$cyc}{$module}{$ko}{'percgd'},  $modulesKO{$cyc}{$module}{$ko}{'description'});
-                     print {$krona_mod_pd_fh} "$modulesKO{$cyc}{$module}{$ko}{'totgd'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
+                     print {$krona_mod_gd_fh} "$modulesKO{$cyc}{$module}{$ko}{'totgd'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                      print {$krona_mod_g_fh} "$modulesKO{$cyc}{$module}{$ko}{'totg'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                      print {$krona_mod_o_fh} "$modulesKO{$cyc}{$module}{$ko}{'toto'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
-                     print {$krona_mod_d_fh} "$modulesKO{$cyc}{$module}{$ko}{'totod'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
+                     print {$krona_mod_od_fh} "$modulesKO{$cyc}{$module}{$ko}{'totod'}\t$cyc\t$module\t$modulesKO{$cyc}{$module}{$ko}{'description'}\n";
                   }
                }
             }
@@ -3176,20 +3029,20 @@ unless ($hmms or $phagesonly){
                    if ($processKO{$cyc}{$proc}{$ko}{'totg'} >= 1) {
                       unless ($selector =~ 'meta.nonkey' or $selector =~ 'VOG'){
                          printf $totproc_tsv_fh ("\t\t%s\t%s\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$ko, $processKO{$cyc}{$proc}{$ko}{'totg'}, $processKO{$cyc}{$proc}{$ko}{'percg'}, $processKO{$cyc}{$proc}{$ko}{'toto'}, $processKO{$cyc}{$proc}{$ko}{'perco'}, $processKO{$cyc}{$proc}{$ko}{'totod'}, $processKO{$cyc}{$proc}{$ko}{'percod'}, $processKO{$cyc}{$proc}{$ko}{'totgd'}, $processKO{$cyc}{$proc}{$ko}{'percgd'},  $processKO{$cyc}{$proc}{$ko}{'description'});
-                         print {$krona_proc_pd_fh} "$processKO{$cyc}{$proc}{$ko}{'totgd'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
+                         print {$krona_proc_gd_fh} "$processKO{$cyc}{$proc}{$ko}{'totgd'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                          print {$krona_proc_g_fh} "$processKO{$cyc}{$proc}{$ko}{'totg'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                          print {$krona_proc_o_fh} "$processKO{$cyc}{$proc}{$ko}{'toto'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
-                         print {$krona_proc_d_fh} "$processKO{$cyc}{$proc}{$ko}{'totod'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
+                         print {$krona_proc_od_fh} "$processKO{$cyc}{$proc}{$ko}{'totod'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                       }
                    } 
                }
                else {
                   unless ($selector =~ 'meta.nonkey' or $selector =~ 'VOG'){
                      printf $totproc_tsv_fh ("\t\t%s\t%s\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$ko, $processKO{$cyc}{$proc}{$ko}{'totg'}, $processKO{$cyc}{$proc}{$ko}{'percg'}, $processKO{$cyc}{$proc}{$ko}{'toto'}, $processKO{$cyc}{$proc}{$ko}{'perco'}, $processKO{$cyc}{$proc}{$ko}{'totod'}, $processKO{$cyc}{$proc}{$ko}{'percod'}, $processKO{$cyc}{$proc}{$ko}{'totgd'}, $processKO{$cyc}{$proc}{$ko}{'percgd'},  $processKO{$cyc}{$proc}{$ko}{'description'});
-                     print {$krona_proc_pd_fh} "$processKO{$cyc}{$proc}{$ko}{'totgd'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
+                     print {$krona_proc_gd_fh} "$processKO{$cyc}{$proc}{$ko}{'totgd'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                      print {$krona_proc_g_fh} "$processKO{$cyc}{$proc}{$ko}{'totg'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                      print {$krona_proc_o_fh} "$processKO{$cyc}{$proc}{$ko}{'toto'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
-                     print {$krona_proc_d_fh} "$processKO{$cyc}{$proc}{$ko}{'totod'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
+                     print {$krona_proc_od_fh} "$processKO{$cyc}{$proc}{$ko}{'totod'}\t$cyc\t$proc\t$ko\t$processKO{$cyc}{$proc}{$ko}{'description'}\n";
                   }
                } 
             }
